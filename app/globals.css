@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+body { font-family: system-ui, sans-serif; margin: 0; color: #222; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+input, button, select, textarea { font-size: 14px; padding: 8px; }
+form label { display: grid; gap: 4px; margin-bottom: 10px; }
+.card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 12px 0; }
+.muted { color: #666; font-size: 13px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
