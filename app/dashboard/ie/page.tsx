@@ -24,6 +24,15 @@ const MOCK = [
   { nim: "2600000002", name: "Contoh Mahasiswa 2", prodi: "Information Systems", campus: "Alam Sutera", ie: true },
 ];
 
+const csvData = [
+  { nim: "2602154321", name: "Aditya Pratamav", major: "Informatika", campus: "Kemanggisan", eventName: "Informatics Global Seminar Series", ieStatus: true},
+  { nim: "2602189012", name: "Siti Rahmawati", major: "Sistem Informasi", campus: "Alam Sutera", eventName: "Sari Tech Fest 2026", ieStatus: false},
+  { nim: "2602194382", name: "Budi Santoso", major: "Teknik Komputer", campus: "Bandung", eventName: "IoT Hands-On Bootcamp", ieStatus: true},
+  { nim: "2602148590", name: "Dewi Lestari", major: "Informatika", campus: "Kemanggisan", eventName: "Binus National Hackathon", ieStatus: false},
+  { nim: "2602167341", name: "Rian Hidayat", major: "Sistem Informasi", campus: "Bandung", eventName: "Enterprise Architecture Colloquium", ieStatus: true},
+  { nim: "2602139482", name: "Farhan Nurhalim", major: "Teknik Komputer", campus: "Alam Sutera", eventName: "Binus Robotics Expo 2026", ieStatus: false},
+];
+
 export default function IEPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,7 +122,7 @@ export default function IEPage() {
         </button>
       </div> {/*Upload file part*/}
       
-      <div className="flex mt-[32px]"> {/* Searching Bar & Filter*/}
+      <div className="flex mt-[32px] gap-[378px]"> {/* Searching Bar & Filter*/}
           <div className="border w-[400px] h-[44px] rounded-xl relative border-[#E2E8F0]"> {/* Search Bar Text Input*/}
             <div className="px-[20px] py-[2px]">
               <input 
@@ -130,17 +139,70 @@ export default function IEPage() {
           
           <div> {/*Filters Dropdown*/}
             <NavigationMenu>
-              <NavigationMenuList>
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger>Item One</NavigationMenuTrigger>
+              <NavigationMenuList className="gap-[8px]">
+      
+                <NavigationMenuItem className="w-[92px] border border-[#E2E8F0] rounded-xl">
+                  <NavigationMenuTrigger>Major</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <NavigationMenuLink>Link</NavigationMenuLink>
+                    <NavigationMenuLink>Link</NavigationMenuLink>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem className="w-[109px] border border-[#E2E8F0] rounded-xl">
+                  <NavigationMenuTrigger>Campus</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <NavigationMenuLink>Link</NavigationMenuLink>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
+
+                <NavigationMenuItem className="w-[93px] border border-[#E2E8F0] rounded-xl">
+                  <NavigationMenuTrigger>Batch</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <NavigationMenuLink>Link</NavigationMenuLink>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem className="w-[103px] border border-[#E2E8F0] rounded-xl">
+                  <NavigationMenuTrigger>IE Status</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <NavigationMenuLink>Link</NavigationMenuLink>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
               </NavigationMenuList>
             </NavigationMenu>
           </div>
       </div>
+
+      <div className="mt-[8px] w-[1214px] rounded-xl">
+        <table>
+          <thead>
+            <tr className="bg-[#F8FAFC] text-[13px] text-[#64748B] rounded-tl-xl rounded-tr-xl border">
+              <th className="w-[100px] rounded-tl-xl">NIM</th> 
+              <th className="w-[200px]">NAME</th> 
+              <th className="w-[200px]">MAJOR</th> 
+              <th className="w-[100px]">CAMPUS</th> 
+              <th className="w-[250px]">EVENT NAME</th> 
+              <th className="w-[50px] rounded-tr-xl">IE STATUS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {csvData.map((m) => (
+              <tr key={m.nim}>
+                <td>{m.nim}</td>
+                <td>{m.name}</td>
+                <td>{m.major}</td>
+                <td>{m.campus}</td>
+                <td>{m.eventName}</td>
+                <td>{m.ieStatus ? "TRUE" : "FALSE"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
     </div> 
     </>
   );
