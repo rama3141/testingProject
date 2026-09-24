@@ -25,12 +25,12 @@ const MOCK = [
 ];
 
 const csvData = [
-  { nim: "2602154321", name: "Aditya Pratamav", major: "Informatika", campus: "Kemanggisan", eventName: "Informatics Global Seminar Series", ieStatus: true},
-  { nim: "2602189012", name: "Siti Rahmawati", major: "Sistem Informasi", campus: "Alam Sutera", eventName: "Sari Tech Fest 2026", ieStatus: false},
-  { nim: "2602194382", name: "Budi Santoso", major: "Teknik Komputer", campus: "Bandung", eventName: "IoT Hands-On Bootcamp", ieStatus: true},
-  { nim: "2602148590", name: "Dewi Lestari", major: "Informatika", campus: "Kemanggisan", eventName: "Binus National Hackathon", ieStatus: false},
-  { nim: "2602167341", name: "Rian Hidayat", major: "Sistem Informasi", campus: "Bandung", eventName: "Enterprise Architecture Colloquium", ieStatus: true},
-  { nim: "2602139482", name: "Farhan Nurhalim", major: "Teknik Komputer", campus: "Alam Sutera", eventName: "Binus Robotics Expo 2026", ieStatus: false},
+  { nim: "2602154321", name: "Aditya Pratamav", major: "Informatika",      campus: "Kemanggisan", eventName: "Informatics Global Seminar Series",  ieStatus: true },
+  { nim: "2602189012", name: "Siti Rahmawati",  major: "Sistem Informasi", campus: "Alam Sutera", eventName: "Sari Tech Fest 2026",                ieStatus: false},
+  { nim: "2602194382", name: "Budi Santoso",    major: "Teknik Komputer",  campus: "Bandung",     eventName: "IoT Hands-On Bootcamp",              ieStatus: true },
+  { nim: "2602148590", name: "Dewi Lestari",    major: "Informatika",      campus: "Kemanggisan", eventName: "Binus National Hackathon",           ieStatus: false},
+  { nim: "2602167341", name: "Rian Hidayat",    major: "Sistem Informasi", campus: "Bandung",     eventName: "Enterprise Architecture Colloquium", ieStatus: true },
+  { nim: "2602139482", name: "Farhan Nurhalim", major: "Teknik Komputer",  campus: "Alam Sutera", eventName: "Binus Robotics Expo 2026",           ieStatus: false},
 ];
 
 export default function IEPage() {

@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
+
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
+import takePhotoIcon  from "@/public/take_photo_icon.png"
 
 // Akses webcam/kamera HP via getUserMedia. Hanya jalan di HTTPS atau localhost.
 export function CameraCapture({ onCapture }: { onCapture: (file: File) => void }) {
@@ -39,6 +42,10 @@ export function CameraCapture({ onCapture }: { onCapture: (file: File) => void }
     setActive(false);
   }
 
+  function turnActive() {
+    setActive(true);
+  }
+
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
@@ -61,28 +68,48 @@ export function CameraCapture({ onCapture }: { onCapture: (file: File) => void }
   useEffect(() => stop, []);
 
   return (
-    <div>
+    <div className="w-[132px]">
+      <div>
+        <button
+          type="button"
+          onClick={start}
+          className="w-[132px] h-[42px] border rounded-xl border-[#CAD5E2] shadow-2xs"
+        >
+          <div className="flex items-center gap-[6px]">
+            <div>
+              <Image src={takePhotoIcon} alt="takePhotoIcon"/>                  
+            </div> 
+            <div>
+              <p className="text-[#314158] text-[14px] font-semibold">Camera</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
       <video
-        ref={videoRef}
-        playsInline
-        muted
-        hidden={!active}
-        style={{ width: "100%", maxWidth: 640, borderRadius: 8 }}
+          ref={videoRef}
+          playsInline
+          muted
+          autoPlay
+          hidden={!active}
+          style={{ width: "600px", maxWidth: "600px", borderRadius: 8 }}
+          className="mt-[42px]"
       />
-      <div className="row">
-        {!active ? (
-          <Button type="button" variant="outline" onClick={start}>
-            Buka kamera
-          </Button>
-        ) : (
+
+      <div>
+        {active ? (
           <>
-            <Button type="button" onClick={capture}>
-              Ambil foto
-            </Button>
-            <Button type="button" variant="outline" onClick={stop}>
-              Tutup kamera
-            </Button>
+            <div className="flex gap-2 mt-4">
+              <Button type="button" onClick={capture}>
+                Take Photo
+              </Button>
+              <Button type="button" variant="outline" onClick={stop}>
+                Close Camera
+              </Button>
+            </div>
           </>
+        ) : (
+          null
         )}
       </div>
       {error && <p className="muted">{error}</p>}
