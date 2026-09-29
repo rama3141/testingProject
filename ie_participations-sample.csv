@@ -1,0 +1,50 @@
+nim,event_name,event_year,campus_location,program_department
+2601000012,Informatics Global Seminar Series,2026,Kemanggisan,Computer Science
+2601000012,AI and Machine Learning Workshop,2026,Kemanggisan,Computer Science
+2601000012,BINUS Tech Innovation Expo,2025,Alam Sutera,Computer Science
+2601000023,Cloud Computing Fundamentals,2026,Kemanggisan,Computer Science
+2601000023,Software Engineering Colloquium,2025,Kemanggisan,Computer Science
+2501000145,Information Systems Summit,2025,Kemanggisan,Information Systems
+2501000145,Digital Transformation Seminar,2025,Alam Sutera,Information Systems
+2501000145,Business Analytics Workshop,2024,Kemanggisan,Information Systems
+2501000238,Mobile Application Development Workshop,2025,Alam Sutera,Mobile Application and Technology
+2501000238,Android Development Seminar,2025,Kemanggisan,Mobile Application and Technology
+2401000317,Computer Science Research Expo,2024,Kemanggisan,Computer Science
+2401000317,Artificial Intelligence Seminar,2024,Alam Sutera,Computer Science
+2401000317,National Hackathon,2025,Kemanggisan,Computer Science
+2401000421,Enterprise Information Systems Colloquium,2024,Kemanggisan,Information Systems
+2401000421,Database Technology Workshop,2024,Alam Sutera,Information Systems
+2301000564,BINUS Robotics Expo,2023,Alam Sutera,Computer Science
+2301000564,Computer Vision Workshop,2024,Kemanggisan,Computer Science
+2301000564,Technology Leadership Seminar,2025,Kemanggisan,Computer Science
+2301000679,Information Technology Innovation Forum,2023,Kemanggisan,Information Technology
+2301000679,Network Security Workshop,2024,Alam Sutera,Information Technology
+2201000788,Information Systems Career Seminar,2022,Alam Sutera,Information Systems
+2201000788,Digital Business Transformation Forum,2023,Kemanggisan,Information Systems
+2201000815,Advanced Programming Workshop,2022,Kemanggisan,Computer Science
+2201000815,Software Architecture Colloquium,2023,Kemanggisan,Computer Science
+2201000815,Industry Technology Seminar,2024,Alam Sutera,Computer Science
+2602000116,Introduction to Artificial Intelligence,2026,Alam Sutera,Computer Science
+2602000116,Programming Fundamentals Workshop,2026,Kemanggisan,Computer Science
+2502000247,Digital Business Innovation Forum,2025,Kemanggisan,Digital Business
+2502000247,E-Commerce Strategy Seminar,2025,Alam Sutera,Digital Business
+2502000359,Information Systems Security Seminar,2025,Kemanggisan,Information Systems
+2502000359,Enterprise Architecture Workshop,2024,Kemanggisan,Information Systems
+2402000472,Full Stack Development Workshop,2024,Alam Sutera,Computer Science
+2402000472,Software Development Life Cycle Seminar,2025,Kemanggisan,Computer Science
+2402000583,Business Management Leadership Forum,2024,Kemanggisan,Business Management
+2402000583,Entrepreneurship and Innovation Seminar,2025,Alam Sutera,Business Management
+2302000614,Computer Science Industry Forum,2023,Kemanggisan,Computer Science
+2302000614,Cloud Infrastructure Workshop,2024,Alam Sutera,Computer Science
+2302000614,AI Engineering Seminar,2025,Kemanggisan,Computer Science
+2302000725,Information Systems Innovation Expo,2023,Alam Sutera,Information Systems
+2302000725,Data Analytics Workshop,2024,Kemanggisan,Information Systems
+2202000836,Software Engineering Industry Seminar,2022,Kemanggisan,Computer Science
+2202000836,Cloud Computing Workshop,2023,Alam Sutera,Computer Science
+2202000836,Advanced Database Seminar,2024,Kemanggisan,Computer Science
+2202000947,Creative Technology Exhibition,2022,Kemanggisan,Visual Communication Design
+2202000947,Digital Design and Innovation Seminar,2023,Alam Sutera,Visual Communication Design
+2202000947,Creative Industry Workshop,2024,Kemanggisan,Visual Communication Design
+2603001058,Information Technology Seminar,2026,Alam Sutera,Information Technology
+2603001058,Web Technology Workshop,2026,Kemanggisan,Information Technology
+2603001058,DevOps and Cloud Computing Seminar,2025,Alam Sutera,Information Technology

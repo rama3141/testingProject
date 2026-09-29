@@ -1,7 +1,7 @@
 export default function Home() {
   return (
     <>
-      <h1>Project Athena</h1>
+      <h1 className="mt-[64px]">Project Athena</h1>
       <p className="muted">
         All-in-one internal app — Divisi Internationalization &amp; Partnership. Lihat <a href="/PRD">PRD</a> di repo
         (<code>PRD.md</code>).

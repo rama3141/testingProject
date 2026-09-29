@@ -19,11 +19,12 @@ export default function Navbar() {
   };
 
   return (
-    <header style={{ borderBottom: "1px solid #E2E8F0", padding: "17px 43px", backgroundColor: "#F8FAFC" }}>
-      <nav style={{ display: "flex", gap: 32, alignItems: "center" }}>
+    <header className="fixed top-0 left-0 w-full border-b border-[#E2E8F0] py-[17px] px-[43px] bg-[#F8FAFC]"> {/* Sticky Navbar */}
+      {/* <nav style={{ display: "flex", gap: 32, alignItems: "center" }}> */}
+      <nav className="flex gap-[32] items-center">
         <strong>
-          <Link href="/dashboard" style={getLinkStyle("/dashboard")} className="text-[21px]">
-            Athena
+          <Link href="/dashboard">
+            <p className="text-[21px] text-[#0a0a0a] font-bold ">Athena</p>
           </Link>
         </strong>
         <strong>

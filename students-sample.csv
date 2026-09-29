@@ -1,0 +1,21 @@
+nim,binusian_id,binusian_batch,student_name,academic_career,program_code,program_department,program_department_realization,faculty_code,faculty_school,faculty_school_realization,campus_code,campus,graduation_status,ie_status,ie_status_wisuda
+2601000012,BN260100001,2026,Andi Pratama,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Active,false,false
+2601000023,BN260100002,2026,Budi Santoso,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Active,true,false
+2501000145,BN250100014,2025,Citra Lestari,Undergraduate,IS,Information Systems,Information Systems,SIS,School of Information Systems,School of Information Systems,JKT,Kemanggisan,Active,true,true
+2501000238,BN250100023,2025,Dimas Wijaya,Undergraduate,MT,Mobile Application and Technology,Mobile Application and Technology,CS,School of Computer Science,School of Computer Science,ALS,Alam Sutera,Active,false,false
+2401000317,BN240100031,2024,Eka Putri Maharani,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Active,true,false
+2401000421,BN240100042,2024,Fajar Nugroho,Undergraduate,IS,Information Systems,Information Systems,SIS,School of Information Systems,School of Information Systems,JKT,Kemanggisan,Active,false,false
+2301000564,BN230100056,2023,Gita Anggraini,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,ALS,Alam Sutera,Active,true,true
+2301000679,BN230100067,2023,Hendra Kurniawan,Undergraduate,IT,Information Technology,Information Technology,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Active,true,false
+2201000788,BN220100078,2022,Intan Permata Sari,Undergraduate,IS,Information Systems,Information Systems,SIS,School of Information Systems,School of Information Systems,ALS,Alam Sutera,Graduated,true,true
+2201000815,BN220100081,2022,Joko Susanto,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Graduated,true,true
+2602000116,BN260200011,2026,Kevin Jonathan,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,ALS,Alam Sutera,Active,false,false
+2502000247,BN250200024,2025,Laras Wulandari,Undergraduate,DI,Digital Business,Digital Business,BIN,BINUS Business School,BINUS Business School,JKT,Kemanggisan,Active,false,false
+2502000359,BN250200035,2025,Maya Salsabila,Undergraduate,IS,Information Systems,Information Systems,SIS,School of Information Systems,School of Information Systems,JKT,Kemanggisan,Active,true,false
+2402000472,BN240200047,2024,Nanda Ramadhan,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,ALS,Alam Sutera,Active,false,false
+2402000583,BN240200058,2024,Olivia Nathania,Undergraduate,BD,Business Management,Business Management,BIN,BINUS Business School,BINUS Business School,JKT,Kemanggisan,Active,true,false
+2302000614,BN230200061,2023,Putra Adi Saputra,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Active,true,true
+2302000725,BN230200072,2023,Qori Aulia Rahman,Undergraduate,IS,Information Systems,Information Systems,SIS,School of Information Systems,School of Information Systems,ALS,Alam Sutera,Active,false,false
+2202000836,BN220200083,2022,Rizky Maulana,Undergraduate,CS,Computer Science,Computer Science,CS,School of Computer Science,School of Computer Science,JKT,Kemanggisan,Graduated,true,true
+2202000947,BN220200094,2022,Salsa Amelia,Undergraduate,DK,Visual Communication Design,Visual Communication Design,FD,Faculty of Digital Communication and Hotel & Tourism,Faculty of Digital Communication and Hotel & Tourism,JKT,Kemanggisan,Graduated,true,true
+2603001058,BN260300105,2026,Taufik Hidayat,Undergraduate,IT,Information Technology,Information Technology,CS,School of Computer Science,School of Computer Science,ALS,Alam Sutera,Active,false,false

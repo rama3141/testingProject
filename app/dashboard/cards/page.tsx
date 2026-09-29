@@ -48,6 +48,12 @@ export default function CardsPage() {
   const   [loading, setLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const            fileInputRef = useRef<HTMLInputElement>(null);
+
+    {/* Bagian camera */}
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [isCameraAtive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   {/* Inisialisasi React hook ⬆️*/}
 
 
@@ -108,9 +114,66 @@ export default function CardsPage() {
   }
   {/* Function untuk selain camera ⬆️*/}
 
+  {/* Function untuk selain camera ⬇️*/}
+  async function start() {
+    setCameraError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Browser tidak mendukung kamera (butuh HTTPS atau localhost). Pakai upload foto / input manual.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setIsCameraActive(true);
+    } catch {
+      setCameraError("Kamera tidak bisa diakses. Cek izin kamera di browser, atau pakai upload foto / input manual.");
+    }
+  }
+
+  function stop() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setIsCameraActive(false);
+  }
+
+  function turnCameraToOff() {
+    setIsCameraActive(false);
+  }
+
+  function capture() {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file: File = new File([blob], `card-${Date.now()}.jpg`, {type: "image/jpeg"});
+        selectImage(file);
+        stop();
+      },
+      "image/jpeg",
+      0.9
+    );
+  }
+
+    {/* Matikan kamera saat keluar dari halaman */}
+  useEffect(() => stop, []);
+  {/* Function untuk selain camera ⬆️*/}
+
   return (
     <>
-    <div className="w-full ml-[7.847vw]"> {/* move all content 7.847% of screen width from the browser left */}
+    <div className="w-full ml-[7.847vw] mt-[72px]"> {/* move all content 7.847% of screen width from the browser left */}
       
       <div className="items-center w-[1214px] h-[63px] mt-[32px]"> {/* upper content */}
         <h1 className="text-[32px] font-bold">Profile Register</h1>
@@ -126,7 +189,20 @@ export default function CardsPage() {
 
           <div className="flex gap-[12px]"> {/* choose file, and take photo button */}
             <div> {/* take photo button */}
-              <CameraCapture onCapture={selectImage}/>
+              <button
+                type="button"
+                onClick={start}
+                className="w-[132px] h-[42px] border rounded-xl border-[#CAD5E2] shadow-2xs"
+              >
+                <div className="px-[20px] flex items-center gap-[6px]">
+                  <div>
+                    <Image src={takePhotoIcon} alt="takePhotoIcon"/>                  
+                  </div> 
+                  <div>
+                    <p className="text-[#314158] text-[14px] font-semibold">Camera</p>
+                  </div>
+                </div>
+              </button>
             </div>
 
             <div className="flex"> {/* choose file button */}
@@ -149,10 +225,11 @@ export default function CardsPage() {
 
                 <button  
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isCameraAtive}
+                  onClick={() => {stop; fileInputRef.current?.click();}} /* Camera dimatikan ketika user klik tombol ini */
                   className="w-[132px] h-[42px] border rounded-xl border-[#CAD5E2] shadow-2xs"
                 >
-                  <div className="flex items-center gap-[8px]">
+                  <div className="px-[5px] flex items-center gap-[8px]">
                     <div>
                       <Image src={addFileIcon} alt="addFileIcon"/>
                     </div>
@@ -163,17 +240,57 @@ export default function CardsPage() {
                 </button> 
               </div>
 
-              {/* Filename pop up after file selected */}
+              {/* file name nya muncul kalau sudah select file*/}
               <div className="ml-[5px] mt-[10px]">
                 <p className="text-[14px] text-[#314158]">
                   {image ? image.name : "No file selected."}
                 </p>
               </div>
-
-              {/* {preview ? <img src={preview} alt="test"/> : null} */}
             </div>
           </div>
-          
+
+          <div> {/* Untuk tampilkan frame yang perlu di take, button take photo, dan button cancel */}
+            <video
+                ref={videoRef}
+                playsInline
+                muted
+                autoPlay
+                hidden={!isCameraAtive}
+                style={{ width: "600px", maxWidth: "600px", borderRadius: 8 }}
+                className="mt-[24px]"
+            />
+
+            {cameraError && <p className="muted">{cameraError}</p>}
+
+            {isCameraAtive ? (
+              // <>
+                <div className="flex mt-4">
+                  <div> {/* button take photo */}
+                    <button 
+                      type="button" 
+                      onClick={capture} 
+                      className="w-[130px] h-[40px] border border-[#155DFC] rounded-xl"
+                    >
+                      <p className="text-[14px] text-[#1447E6] font-semibold">Take Photo</p>
+                    </button>
+                  </div>
+
+                  <div> {/* button cancel, digeser ke kiri sejauh (600 - 130 - 104)px*/}
+                    <button 
+                      type="button" 
+                      onClick={stop}
+                      className="ml-[366px] w-[104px] h-[40px] border border-[#CAD5E2] rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              // </>
+            ) : (
+              null
+            )}
+          </div>
+
           {/* untuk tampilkan image yang dipilih, atau dicapture dengan camera */}
           <div className="mt-[24px]">
             {/* {preview ? <img src={preview} alt="previewImage" /> : null}  */}
@@ -200,43 +317,22 @@ export default function CardsPage() {
           </div>
 
           {/* scan ocr button */}
-          {preview ?
-            ( // Kalau url preview sudah ada, execute code ini
-              <div className="mt-[28px] mb-[8px]"> {/* tombol scan ocr */}
-                <button
-                  type="button"
-                  className="flex w-[132px] h-[40px] border rounded-xl border-[#CAD5E2] bg-[#155DFC] shadow-2xs"
-                >
-                  <div className="flex items-center gap-[8px]">
-                    <div>
-                      <Image src={scanIcon} alt="scanIcon"/>
-                    </div>
-                    <div>
-                      <span className="text-[14px] font-semibold text-[#FFFFFF]">Scan OCR</span>
-                    </div>
-                  </div>
-
-                </button>  
+          <div className="mt-[28px] mb-[8px]"> {/* tombol scan ocr */}
+            <button
+              type="button"
+              className={`flex w-[132px] h-[40px] border rounded-xl border-[#CAD5E2] ${preview ? "bg-[#155DFC]" : "bg-[#CAD5E2]"} shadow-2xs`}
+            >
+              <div className="px-[12px] flex items-center gap-[8px]">
+                <div>
+                  <Image src={scanIcon} alt="scanIcon"/>
+                </div>
+                <div>
+                  <span className="text-[14px] font-semibold text-[#FFFFFF]">Scan OCR</span>
+                </div>
               </div>
-            ) : ( // kalau url preview masih belum ada, code dalam kurung ini akan dieksekusi
-              <div className="mt-[28px] mb-[8px]">
-                <button
-                  type="button"
-                  className="flex w-[132px] h-[40px] border rounded-xl border-[#CAD5E2] bg-[#CAD5E2] shadow-2xs"
-                >
-                  <div className="flex items-center gap-[8px]">
-                    <div>
-                      <Image src={scanIcon} alt="scanIcon"/>
-                    </div>
-                    <div>
-                      <span className="text-[14px] font-semibold text-[#FFFFFF]">Scan OCR</span>
-                    </div>
-                  </div>
+            </button>  
+          </div>
 
-                </button>  
-              </div>
-            )
-          }
         </div>
       </div>
 
@@ -415,144 +511,3 @@ export default function CardsPage() {
     </>
   )
 }
-
-{/* // export default function CardsPage() { 
-//   const [draft, setDraft] = useState(EMPTY_DRAFT);
-//   const [image, setImage] = useState<File | null>(null);
-//   const [preview, setPreview] = useState<string | null>(null);
-//   const [loading, setLoading] = useState(false);
-//   const [ocrError, setOcrError] = useState<string | null>(null);
-
-//   // Bebaskan object URL preview lama
-//   useEffect(() => {
-//     return () => {
-//       if (preview) URL.revokeObjectURL(preview);
-//     };
-//   }, [preview]);
-
-//   function selectImage(file: File) {
-//     setImage(file);
-//     setPreview(URL.createObjectURL(file));
-//     setOcrError(null);
-//   }
-
-//   async function runOcr() {
-//     if (!image) return;
-//     setLoading(true);
-//     setOcrError(null);
-//     try {
-//       const fd = new FormData();
-//       fd.append("image", image);
-//       const res = await fetch("/api/cards/ocr", { method: "POST", body: fd });
-//       const body = await res.json().catch(() => ({}));
-//       if (!res.ok) {
-//         setOcrError(body.error ?? "OCR gagal. Silakan input manual.");
-//         return;
-//       }
-//       setDraft({ ...EMPTY_DRAFT, ...body.draft });
-//     } catch {
-//       setOcrError("OCR gagal (koneksi). Silakan input manual.");
-//     } finally {
-//       setLoading(false);
-//     }
-//   }
-
-//   // Hapus foto saja (untuk ambil ulang); isi form tetap
-//   function removeImage() {
-//     setImage(null);
-//     setPreview(null);
-//     setOcrError(null);
-//   }
-
-//   function resetAll() {
-//     setDraft(EMPTY_DRAFT);
-//     setImage(null);
-//     setPreview(null);
-//     setOcrError(null);
-//   }
-
-//   return (
-//     <>
-//       <h1>Name Cards</h1>
-//       <p className="muted">
-//         Alur: foto/upload → draft OCR → koreksi manual → save. Form kosong di bawah = fallback manual kalau OCR
-//         gagal (PRD §5).
-//       </p>
-//       <div className="card">
-//         <h3>1. Foto kartu nama</h3>
-//         <CameraCapture onCapture={selectImage} />
-//         <p className="muted">atau upload file:</p>
-//         <input
-//           type="file"
-//           accept="image/*"
-//           onChange={(e) => {
-//             const file = e.target.files?.[0];
-//             if (file) selectImage(file);
-//             e.target.value = "";
-//           }}
-//         />
-//         {preview && (
-//           <div style={{ position: "relative", display: "inline-block" }}>
-//             {/* eslint-disable-next-line @next/next/no-img-element */}
-//             <img src={preview} alt="Preview kartu nama" style={{ maxWidth: 320, borderRadius: 8, display: "block" }} />
-//             <Button
-//               type="button"
-//               variant="outline"
-//               size="icon-sm"
-//               aria-label="Hapus foto"
-//               title="Hapus foto (ambil ulang)"
-//               onClick={removeImage}
-//               disabled={loading}
-//               style={{ position: "absolute", top: 6, right: 6 }}
-//             >
-//               <X />
-//             </Button>
-//           </div>
-//         )}
-//         <div className="row">
-//           <Button type="button" variant="outline" onClick={runOcr} disabled={!image || loading}>
-//             {loading ? "Memproses..." : "Scan OCR"}
-//           </Button>
-//         </div>
-//         {ocrError && <p className="muted">{ocrError}</p>}
-//       </div>
-//       <div className="card">
-//         <h3>2. Form (draft OCR / manual)</h3>
-//         <form
-//           onSubmit={(e) => {
-//             e.preventDefault();
-//             alert("TODO(squad-2): save ke Supabase. Payload: " + JSON.stringify(draft));
-//           }}
-//         >
-//           {(
-//             [
-//               ["full_name", "Nama"],
-//               ["job_title", "Jabatan"],
-//               ["company", "Institusi"],
-//               ["email1", "Email 1"],
-//               ["email2", "Email 2 (opsional)"],
-//               ["phone1", "Phone 1"],
-//               ["phone2", "Phone 2 (opsional)"],
-//               ["address", "Alamat"],
-//               ["notes", "Catatan"],
-//             ] as const
-//           ).map(([k, label]) => (
-//             <label key={k}>
-//               {label}
-//               <input
-//                 value={draft[k]}
-//                 onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
-//               />
-//             </label>
-//           ))}
-//           <div className="row">
-//             <Button type="submit" variant="outline">Save (stub)</Button>
-//             <Button type="button" variant="outline" onClick={resetAll}>
-//               Reset (input manual baru)
-//             </Button>
-//           </div>
-//         </form>
-//       </div>
-//     </>
-//   );
-// }

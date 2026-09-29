@@ -64,55 +64,70 @@ export function CameraCapture({ onCapture }: { onCapture: (file: File) => void }
     );
   }
 
-  // Matikan kamera saat keluar dari halaman
+  {/* Matikan kamera saat keluar dari halaman */}
   useEffect(() => stop, []);
 
   return (
-    <div className="w-[132px]">
-      <div>
-        <button
-          type="button"
-          onClick={start}
-          className="w-[132px] h-[42px] border rounded-xl border-[#CAD5E2] shadow-2xs"
-        >
-          <div className="flex items-center gap-[6px]">
-            <div>
-              <Image src={takePhotoIcon} alt="takePhotoIcon"/>                  
-            </div> 
-            <div>
-              <p className="text-[#314158] text-[14px] font-semibold">Camera</p>
+    <div>
+      <div className="w-[132px]">
+        <div>
+          <button
+            type="button"
+            onClick={start}
+            className="w-[132px] h-[42px] border rounded-xl border-[#CAD5E2] shadow-2xs"
+          >
+            <div className="flex items-center gap-[6px]">
+              <div>
+                <Image src={takePhotoIcon} alt="takePhotoIcon"/>                  
+              </div> 
+              <div>
+                <p className="text-[#314158] text-[14px] font-semibold">Camera</p>
+              </div>
             </div>
-          </div>
-        </button>
+          </button>
+        </div>
+
+        <video
+            ref={videoRef}
+            playsInline
+            muted
+            autoPlay
+            hidden={!active}
+            style={{ width: "600px", maxWidth: "600px", borderRadius: 8 }}
+            className="mt-[42px]"
+        />
+
+        {error && <p className="muted">{error}</p>}
       </div>
 
-      <video
-          ref={videoRef}
-          playsInline
-          muted
-          autoPlay
-          hidden={!active}
-          style={{ width: "600px", maxWidth: "600px", borderRadius: 8 }}
-          className="mt-[42px]"
-      />
-
-      <div>
+      {/* <div> */}
         {active ? (
-          <>
-            <div className="flex gap-2 mt-4">
-              <Button type="button" onClick={capture}>
-                Take Photo
-              </Button>
-              <Button type="button" variant="outline" onClick={stop}>
-                Close Camera
-              </Button>
+          // <>
+            <div className="flex gap-[87px] mt-4">
+              <div className="w-[130px] h-[40px] border border-[#155DFC] rounded-xl"> {/* button take photo */}
+                <button 
+                  type="button" 
+                  onClick={capture} 
+                  className=""
+                >
+                  <p className="text-[14px] text-[#1447E6] font-semibold">Take Photo</p>
+                </button>
+              </div>
+
+              <div className="w-[104px] h-[40px] border border-[#CAD5E2] rounded-xl"> {/* button cancel */}
+                <button 
+                  type="button" 
+                  onClick={stop}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          </>
+          // </>
         ) : (
           null
         )}
-      </div>
-      {error && <p className="muted">{error}</p>}
+      {/* </div> */}
     </div>
   );
 }
