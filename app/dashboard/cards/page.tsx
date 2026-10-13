@@ -26,23 +26,41 @@ const EMPTY_DRAFT = {
   notes: "",
 };
 
+type DraftKey = keyof typeof EMPTY_DRAFT;
+
+// `key` memetakan tiap input ke kolom draft/DB. First name + Last name sama-sama
+// menunjuk full_name karena OCR dan kolom DB menyimpan nama sebagai satu string.
 const formFields = [
-  { id: "firstName"  , label: "First name"        , type: "text", placeholder: "First name"            },
-  { id: "lastName"   , label: "Last name"         , type: "text", placeholder: "Last name"             },
-  { id: "job"        , label: "Job"               , type: "text", placeholder: "Job title"             },
-  { id: "institution", label: "Institution"       , type: "text", placeholder: "Company or institution"},
-  { id: "email1"     , label: "Email 1"           , type: "text", placeholder: "name@example.com"      },
-  { id: "email2"     , label: "Email 2 (Optional)", type: "text", placeholder: "name@example.com"      },
-  { id: "phone1"     , label: "Phone 1"           , type: "text", placeholder: "+62 8xx xxxx xxxx"     },
-  { id: "phone2"     , label: "Phone 2 (Optional)", type: "text", placeholder: "+62 8xx xxxx xxxx"     },
-  { id: "address"    , label: "Address"           , type: "text", placeholder: "Address"               },
-  { id: "notes"      , label: "Notes"             , type: "text", placeholder: "Notes"                 }
-];
+  { id: "firstName"  , key: "full_name", label: "First name"        , type: "text", placeholder: "First name"            },
+  { id: "lastName"   , key: "full_name", label: "Last name"         , type: "text", placeholder: "Last name"             },
+  { id: "job"        , key: "job_title", label: "Job"               , type: "text", placeholder: "Job title"             },
+  { id: "institution", key: "company"  , label: "Institution"       , type: "text", placeholder: "Company or institution"},
+  { id: "email1"     , key: "email1"   , label: "Email 1"           , type: "text", placeholder: "name@example.com"      },
+  { id: "email2"     , key: "email2"   , label: "Email 2 (Optional)", type: "text", placeholder: "name@example.com"      },
+  { id: "phone1"     , key: "phone1"   , label: "Phone 1"           , type: "text", placeholder: "+62 8xx xxxx xxxx"     },
+  { id: "phone2"     , key: "phone2"   , label: "Phone 2 (Optional)", type: "text", placeholder: "+62 8xx xxxx xxxx"     },
+  { id: "address"    , key: "address"  , label: "Address"           , type: "text", placeholder: "Address"               },
+  { id: "notes"      , key: "notes"    , label: "Notes"             , type: "text", placeholder: "Notes"                 }
+] as const satisfies readonly { id: string; key: DraftKey; label: string; type: string; placeholder: string }[];
+
+// Form punya dua input nama, draft hanya punya full_name. Token pertama dianggap
+// first name, sisanya last name — heuristik, jadi hasil OCR tetap perlu dicek user.
+function splitFullName(full: string) {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  return { firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") };
+}
+
+function joinFullName(firstName: string, lastName: string) {
+  return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+}
 
 export default function CardsPage() {
   {/* Inisialisasi React hook ⬇️*/}
     {/* Bagian selain camera */}
   const       [draft, setDraft] = useState(EMPTY_DRAFT);
+  // Input nama dipegang mentah di state sendiri supaya user bisa mengetik spasi;
+  // draft.full_name tetap jadi nilai kanonik yang dikirim ke DB.
+  const [nameParts, setNameParts] = useState({ firstName: "", lastName: "" });
   const       [image, setImage] = useState<File | null>(null);
   const   [preview, setPreview] = useState<string | null>(null);
   const   [loading, setLoading] = useState(false);
@@ -66,6 +84,16 @@ export default function CardsPage() {
       }
     };
   }, [preview]);
+
+  function setField(key: DraftKey, value: string) {
+    setDraft((d) => ({ ...d, [key]: value }));
+  }
+
+  function setNamePart(part: "firstName" | "lastName", value: string) {
+    const next = { ...nameParts, [part]: value };
+    setNameParts(next);
+    setField("full_name", joinFullName(next.firstName, next.lastName));
+  }
 
   function selectImage(file: File) {
     setImage(file);
@@ -91,7 +119,9 @@ export default function CardsPage() {
         setOcrError(body.error ?? "OCR Failed. Please input manually.");
         return;
       }
-      setDraft({...EMPTY_DRAFT, ...body.draft});
+      const merged = {...EMPTY_DRAFT, ...body.draft};
+      setDraft(merged);
+      setNameParts(splitFullName(merged.full_name));
     } catch {
       setOcrError("OCR failed (connection). Please input manually.");
     } finally {
@@ -108,6 +138,7 @@ export default function CardsPage() {
 
   function resetAll() {
     setDraft(EMPTY_DRAFT);
+    setNameParts({ firstName: "", lastName: "" });
     setImage(null);
     setPreview(null);
     setOcrError(null);
@@ -226,7 +257,7 @@ export default function CardsPage() {
                 <button  
                   type="button"
                   disabled={isCameraAtive}
-                  onClick={() => {stop; fileInputRef.current?.click();}} /* Camera dimatikan ketika user klik tombol ini */
+                  onClick={() => {stop(); fileInputRef.current?.click();}} /* Camera dimatikan ketika user klik tombol ini */
                   className="w-[132px] h-[42px] border rounded-xl border-[#CAD5E2] shadow-2xs"
                 >
                   <div className="px-[5px] flex items-center gap-[8px]">
@@ -320,17 +351,23 @@ export default function CardsPage() {
           <div className="mt-[28px] mb-[8px]"> {/* tombol scan ocr */}
             <button
               type="button"
-              className={`flex w-[132px] h-[40px] border rounded-xl border-[#CAD5E2] ${preview ? "bg-[#155DFC]" : "bg-[#CAD5E2]"} shadow-2xs`}
+              onClick={runOcr}
+              disabled={!image || loading}
+              className={`flex w-[132px] h-[40px] border rounded-xl border-[#CAD5E2] ${preview ? "bg-[#155DFC]" : "bg-[#CAD5E2]"} shadow-2xs disabled:opacity-60`}
             >
               <div className="px-[12px] flex items-center gap-[8px]">
                 <div>
                   <Image src={scanIcon} alt="scanIcon"/>
                 </div>
                 <div>
-                  <span className="text-[14px] font-semibold text-[#FFFFFF]">Scan OCR</span>
+                  <span className="text-[14px] font-semibold text-[#FFFFFF]">{loading ? "Scanning..." : "Scan OCR"}</span>
                 </div>
               </div>
             </button>  
+
+            {ocrError ? (
+              <p className="mt-[8px] text-[13px] text-[#C10007]">{ocrError}</p>
+            ) : null}
           </div>
 
         </div>
@@ -350,6 +387,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[0].type} id={formFields[0].id} name={formFields[0].id}
                     placeholder={formFields[0].placeholder}
+                    value={nameParts.firstName}
+                    onChange={(e) => setNamePart("firstName", e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />    
@@ -362,6 +401,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[1].type} id={formFields[1].id} name={formFields[1].id}
                     placeholder={formFields[1].placeholder}
+                    value={nameParts.lastName}
+                    onChange={(e) => setNamePart("lastName", e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />
@@ -376,6 +417,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[2].type} id={formFields[2].id} name={formFields[2].id}
                     placeholder={formFields[2].placeholder}
+                    value={draft[formFields[2].key]}
+                    onChange={(e) => setField(formFields[2].key, e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />    
@@ -388,6 +431,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[3].type} id={formFields[3].id} name={formFields[3].id}
                     placeholder={formFields[3].placeholder}
+                    value={draft[formFields[3].key]}
+                    onChange={(e) => setField(formFields[3].key, e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />
@@ -402,6 +447,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[4].type} id={formFields[4].id} name={formFields[4].id}
                     placeholder={formFields[4].placeholder}
+                    value={draft[formFields[4].key]}
+                    onChange={(e) => setField(formFields[4].key, e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />    
@@ -414,6 +461,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[5].type} id={formFields[5].id} name={formFields[5].id}
                     placeholder={formFields[5].placeholder}
+                    value={draft[formFields[5].key]}
+                    onChange={(e) => setField(formFields[5].key, e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />
@@ -428,6 +477,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[6].type} id={formFields[6].id} name={formFields[6].id}
                     placeholder={formFields[6].placeholder}
+                    value={draft[formFields[6].key]}
+                    onChange={(e) => setField(formFields[6].key, e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />    
@@ -440,6 +491,8 @@ export default function CardsPage() {
                   <input 
                     type={formFields[7].type} id={formFields[7].id} name={formFields[7].id}
                     placeholder={formFields[7].placeholder}
+                    value={draft[formFields[7].key]}
+                    onChange={(e) => setField(formFields[7].key, e.target.value)}
                     className="outline-none w-[578px]"
                     required
                   />
@@ -453,6 +506,8 @@ export default function CardsPage() {
                 <input 
                   type={formFields[8].type} id={formFields[8].id} name={formFields[8].id}
                   placeholder={formFields[8].placeholder}
+                  value={draft[formFields[8].key]}
+                  onChange={(e) => setField(formFields[8].key, e.target.value)}
                   className="outline-none w-[1150px]"
                   required
                 />    
@@ -465,6 +520,8 @@ export default function CardsPage() {
                 <input 
                   type={formFields[9].type} id={formFields[9].id} name={formFields[9].id}
                   placeholder={formFields[9].placeholder}
+                  value={draft[formFields[9].key]}
+                  onChange={(e) => setField(formFields[9].key, e.target.value)}
                   className="outline-none w-[1150px]"
                   required
                 />    
@@ -490,6 +547,7 @@ export default function CardsPage() {
               <div>
                 <button
                   type="button"
+                  onClick={resetAll}
                   className="w-[104px] h-[40px] border rounded-xl border-[#CAD5E2] shadow-2xs"
                 >
                   <div className="flex items-center gap-[6px]">

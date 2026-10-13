@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // POST /api/cards/ocr — terima foto kartu nama (multipart, field "image"),
-// forward ke OpenAI (vision), return draft JSON. API key server-side only (PRD §3, §5).
+// forward ke OpenRouter (vision), return draft JSON. API key server-side only (PRD §3, §5).
 
 const FIELDS = [
   "full_name",
@@ -20,16 +20,35 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 const PROMPT =
   "Extract business card fields as JSON with exactly these keys: " +
   FIELDS.join(", ") +
-  ". Majority language English. Return empty string for missing fields. No guessing. " +
+  ". Majority language English. Use null for any field not printed on the card. " +
+  "Do not guess, infer, or invent values. " +
   "Put extra info (website, fax, etc.) in notes.";
 
+// Structured Outputs: bentuk balasan dibatasi di level decoding, bukan sekadar "JSON
+// yang valid". strict:true mewajibkan semua key ada di `required`, jadi field yang tidak
+// tercetak di kartu dinyatakan null — bukan dihilangkan. Catatan: OpenRouter meneruskan
+// response_format ke provider upstream, jadi dukungan strict tergantung model yang dipilih.
+const CARD_SCHEMA = {
+  name: "business_card",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: Object.fromEntries(
+      FIELDS.map((k) => [k, { type: ["string", "null"] }])
+    ),
+    required: [...FIELDS],
+    additionalProperties: false,
+  },
+} as const;
+
 export async function POST(req: Request) {
-  // TODO: isi OPENAI_API_KEY di .env.local setelah key didapat
-  const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  if (!apiKey || apiKey === "your-openai-api-key-here") {
+  // OpenRouter: key diawali "sk-or-v1-". Nama model wajib pakai prefix provider,
+  // mis. "openai/gpt-4o-mini" — tanpa prefix OpenRouter menolak request.
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+  if (!apiKey || apiKey.startsWith("your-")) {
     return NextResponse.json(
-      { error: "OCR belum dikonfigurasi (OPENAI_API_KEY kosong). Silakan input manual." },
+      { error: "OCR belum dikonfigurasi (OPENROUTER_API_KEY kosong). Silakan input manual." },
       { status: 503 }
     );
   }
@@ -56,15 +75,18 @@ export async function POST(req: Request) {
   const dataUrl = `data:${file.type};base64,${base64}`;
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        // Opsional, dipakai OpenRouter untuk atribusi di dashboard mereka.
+        "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "http://localhost:3000",
+        "X-Title": "IE Dashboard",
       },
       body: JSON.stringify({
         model,
-        response_format: { type: "json_object" },
+        response_format: { type: "json_schema", json_schema: CARD_SCHEMA },
         messages: [
           {
             role: "user",
@@ -78,7 +100,7 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
-      console.error("OpenAI error", res.status, await res.text());
+      console.error("OpenRouter error", res.status, await res.text());
       return NextResponse.json(
         { error: "OCR gagal diproses. Silakan coba lagi atau input manual." },
         { status: 502 }
@@ -88,7 +110,8 @@ export async function POST(req: Request) {
     const data = await res.json();
     const raw = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
 
-    // Pastikan semua field ada dan bertipe string
+    // Schema sudah menjamin bentuknya; normalisasi tetap dipakai sebagai jaring pengaman
+    // dan untuk memetakan null (tidak ada di kartu) ke "" agar cocok dengan input form.
     const draft = Object.fromEntries(
       FIELDS.map((k) => [k, typeof raw[k] === "string" ? raw[k].trim() : ""])
     );
