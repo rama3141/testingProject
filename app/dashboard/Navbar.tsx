@@ -24,7 +24,7 @@ export default function Navbar() {
       <nav className="flex gap-[32] items-center">
         <strong>
           <Link href="/dashboard">
-            <p className="text-[21px] text-[#0a0a0a] font-bold ">Athena</p>
+            <p className="text-[21px] text-[#0a0a0a] font-bold">Athena</p>
           </Link>
         </strong>
         <strong>

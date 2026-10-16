@@ -1,0 +1,39 @@
+Cara menang:
+Yang habis yang menang.
+Yang masih ada terakhir yang kalah. 
+
+urutan angka untuk 1 kartu:
+2, as, king, queen, jack, 10, 9, 8, 7, 6, 5, 4, 3
+
+urutan simbol:
+1. sekop
+2. hati
+3. daun keriting / keriting
+4. diamond
+
+__________________________________________________________________________________________________
+urutan power untuk tiap formasi di atas per:
+--------------------------------------------------------------------------------------------------
+1. Seriflash, 5 kartu yang memenuhi syarat seri, dan flash.
+(example: 3 sekop, 4 sekop, 5 sekop, 6 sekop, 7 sekop).
+--------------------------------------------------------------------------------------------------
+2. Piting, 5 kartu, 4 angka sama, dan 1 kartu random.
+(example: 7 diamond, 7 keriting, 7 hati, 7 sekop, 3 keritng)
+--------------------------------------------------------------------------------------------------
+3. Polo/fullhouse, 5 kartu yang terdiri dari 3 kartu sama angka, dan 2 kartu sama angka lainnya.
+(example: 3 keriting, 3 hati, 3 sekop, 9 hati, 9 sekop)
+--------------------------------------------------------------------------------------------------
+4. flash, 5 kartu simbol sama semua.
+(example: 5 keriting, 7 keriting, 10 keriting, jack keriting, as keriting)
+--------------------------------------------------------------------------------------------------
+5. seri, 5 kartu dengan urutan angka increment beruntun.
+(example: 3 hati, 4 hati, 5 diamond, 6 sekop, 7 diamond)
+--------------------------------------------------------------------------------------------------
+6. tres, 4 kartu, 3 angka sama dan 1 kartu random. 
+(example : 4 diamond, 4 keriting, 4 sekop, 5 keriting)
+__________________________________________________________________________________________________
+
+Rule :
+1). 1 kartu hanya boleh dibalas 1 kartu.
+2). per hanya boleh dibalas oleh per.
+3). Formasi di atas per bisa counter satu dengan lainnya, asalkan dengan power yang lebih tinggi.
