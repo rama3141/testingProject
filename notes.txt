@@ -1,0 +1,31 @@
+Langkah kerja :
+20 okt
+\Nambah table "event" -> id, event_name, event_year, event_date, event_location, created_at, updated_at. ✅
+Nambah field "updated_at" dan "updated_by" di table "students". ✅
+
+21 okt
+Rubah code untuk serverAction supaya sesuai dengan rule tables yang terbaru. ✅
+-> handleSubmitSingleUpdate ✅
+-> syncStudentIeStatuses ✅
+-> handleFormUploadBulkAction ✅
+
+Rubah bagian dynamic routing page (bagian student profile page). ✅
+
+22 okt
+Tambahin loading animation dan confirmation pada Upload Bulk dan Single Update di IE monitoring. ✅
+-> single update ✅
+-> upload bulk ✅
+
+Reload otomatis setelah SIngle Update dan Upload Bulk.
+
+Nambah pop up massage.
+ 
+
+Isi presentasi: 
+Jelasin kontribusi tiap anggota (Apa role yang diambil, apa saja yang dikerjakan secara ringkas oleh orang tersebut).
+Listing fitur-fitur yang sudah diselesaikan dan yang belum diselesaikan.
+Lampirkan Screenshoot dari penjelasan untuk fitur.
+Demonstrasi website-nya.
+
+Penjelasan mengenai mengapa tidak menggunakan aplikasi seperti excel saja ?
+Karena setiap update data-data mahasiswa harus verifikasi dari pihak kampus dulu, tidak real time

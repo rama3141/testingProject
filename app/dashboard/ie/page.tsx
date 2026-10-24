@@ -1,6 +1,6 @@
 // Isi awalnya ada di app/components/ui/tempIEPage.tsx
 import { supabaseServer } from "@/lib/supabase/server";
-import IEMonitoringClient from "./IEMonitoringClient";
+import IEMonitoringClient from "./IEMonitoringClientPage";
 
 export default async function IEPage() {
     const supabase = await supabaseServer();
@@ -21,4 +21,4 @@ export default async function IEPage() {
     return (
       <IEMonitoringClient students={students ?? []} />
     );
-}
+} 

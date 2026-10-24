@@ -3,6 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import dropDownArrowIcon from "@/public/drop_down_arrow_icon.png";
+
+{/* navbar dropdown dari shadCN */}
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu"
+
 export default function Navbar() {
   const pathname = usePathname();
 
@@ -33,9 +45,21 @@ export default function Navbar() {
           </Link>
         </strong>
         <strong>
-          <Link href="/dashboard/cards" style={getLinkStyle("/dashboard/cards")}>
+          {/* <Link href="/dashboard/cards" style={getLinkStyle("/dashboard/cards")}>
             Name Cards
-          </Link>
+          </Link> */}
+          <NavigationMenu>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <NavigationMenuTrigger>Name Cards</NavigationMenuTrigger>
+                <NavigationMenuContent className="bg-[#FFFFFF] rounded-lg">
+                    {/* style={getLinkStyle("/dashboard/cards")} */}
+                    <NavigationMenuLink href="/dashboard/cards">Profile Register</NavigationMenuLink>
+                    <NavigationMenuLink href="/dashboard/partnerViewMenu">View Menu</NavigationMenuLink>
+                </NavigationMenuContent>
+              </NavigationMenuItem>    
+            </NavigationMenuList>
+          </NavigationMenu>
         </strong>
       </nav>
     </header>

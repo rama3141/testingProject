@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       {/* <main style={{ padding: 20, maxWidth: 1440, margin: "0 auto" }}> */}
       {/* <main className="mx-auto max-w-480 px-5"> */}
       {/* 1214px = 1440px - 2*113px */}
-      <main className="mx-auto w-full max-w-vw">
+      <main className="mx-auto w-full max-w-dvw">
         {children} 
       </main>
     </>

@@ -33,13 +33,18 @@ type Student = {
 type IEParticipation = {
     id: string;
     nim: string;
-    event_name: string;
-    event_year: string;
-    campus_location: string | null;
+    event_id: string;
     program_department: string | null;
     created_by: string | null;
     created_at: string;
-}
+
+    event: {
+        id: string;
+        event_name: string;
+        event_year: number;
+        event_location: string | null;
+    };
+};
 
 type StudentProfileClientProps = {
   student: Student;
@@ -133,7 +138,7 @@ export default async function StudentProfilePage({student, participations,}: Stu
                                     <p className="ml-[24px] text-[#64748B] text-[11px]">EVENT YEAR</p>
                                 </th>
                                 <th className="w-[304px] pt-[14px] pb-[15px] text-left border border-[#ddd]">
-                                    <p className="ml-[24px] text-[#64748B] text-[11px]">CAMPUS LOCATION</p>
+                                    <p className="ml-[24px] text-[#64748B] text-[11px]">EVENT LOCATION</p>
                                 </th>
                             </tr>
                         </thead>
@@ -142,13 +147,13 @@ export default async function StudentProfilePage({student, participations,}: Stu
                             {participations.map((event) => (
                             <tr key={event.id}>
                                 <td className="h-[58px] border border-[#ddd] pt-[19.5px] pb-[19.5px] text-left">
-                                    <p className="ml-[24px] text-[14px] font-semibold text-[#0F172A]">{event.event_name}</p>    
+                                    <p className="ml-[24px] text-[14px] font-semibold text-[#0F172A]">{event.event.event_name}</p>    
                                 </td>
                                 <td className="h-[58px] border border-[#ddd] pt-[21px] pb-[18px] text-left">
-                                    <p className="ml-[24px] text-[14px] text-[#64748B]">{event.event_year}</p>
+                                    <p className="ml-[24px] text-[14px] text-[#64748B]">{event.event.event_year}</p>
                                 </td>
                                 <td className="h-[58px] border border-[#ddd] pt-[15px] pb-[24px] text-left">
-                                    <p className="ml-[24px] text-[14px] text-[#64748B]">{event.campus_location}</p>
+                                    <p className="ml-[24px] text-[14px] text-[#64748B]">{event.event.event_location ?? "Not specified"}</p>
                                 </td>
                             </tr>
                             ))}
