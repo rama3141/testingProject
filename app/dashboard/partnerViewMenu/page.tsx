@@ -6,6 +6,6 @@ import PartnerViewMenuClientPage from "./partnerViewMenuClientPage";
 export default async function partnerViewMenuPage() {
 
     return (
-      <PartnerViewMenuClientPage/>
+      <PartnerViewMenuClientPage partners={[]}/>
     );
 }

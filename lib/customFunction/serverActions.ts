@@ -5,209 +5,6 @@ import { supabaseServer } from "../supabase/server";
 import * as XLSX from 'xlsx';
 import papa from "papaparse";
 
-type supabaseInsertRows = Array<Record<string, any>>;
-
-
-async function syncStudentIeStatuses(
-    supabase: Awaited<ReturnType<typeof supabaseServer>>,
-    inputNims: string[]
-) {
-    const currentYear = Number(
-        new Intl.DateTimeFormat("en-US", {
-            timeZone: "Asia/Jakarta",
-            year: "numeric",
-        }).format(new Date())
-    );
-
-    // Remove duplicate NIMs and empty values.
-    const uniqueNims = [
-        ...new Set(
-            inputNims
-                .map((nim) => String(nim).trim())
-                .filter(Boolean)
-        ),
-    ];
-
-    if (uniqueNims.length === 0) {
-        return;
-    }
-
-    // Process NIMs in batches to avoid excessively large queries.
-    const batchSize = 200;
-
-    for (let i = 0; i < uniqueNims.length; i += batchSize) {
-        const nimBatch = uniqueNims.slice(i, i + batchSize);
-
-        // Find students who attended an event in the current year.
-        const { data: currentYearRecords, error: fetchError } =
-            await supabase
-                .from("ie_participations")
-                .select("nim")
-                .in("nim", nimBatch)
-                .eq("event_year", currentYear);
-
-        if (fetchError) {
-            throw new Error(
-                `Failed to fetch current-year IE participations: ${fetchError.message}`
-            );
-        }
-
-        const currentYearNims = new Set(
-            (currentYearRecords ?? []).map((record) => record.nim)
-        );
-
-        const attendedThisYear = nimBatch.filter((nim) =>
-            currentYearNims.has(nim)
-        );
-
-        const attendedPreviousYearsOnly = nimBatch.filter(
-            (nim) => !currentYearNims.has(nim)
-        );
-
-        // Update students who attended at least one event this year.
-        if (attendedThisYear.length > 0) {
-            const { error } = await supabase
-                .from("students")
-                .update({
-                    ie_status: true,
-                    ie_status_wisuda: true,
-                })
-                .in("nim", attendedThisYear);
-
-            if (error) {
-                throw new Error(
-                    `Failed to update current-year student statuses: ${error.message}`
-                );
-            }
-        }
-
-        // Update students who have participation records,
-        // but none in the current year.
-        if (attendedPreviousYearsOnly.length > 0) {
-            const { error } = await supabase
-                .from("students")
-                .update({
-                    ie_status_wisuda: true,
-                })
-                .in("nim", attendedPreviousYearsOnly);
-
-            if (error) {
-                throw new Error(
-                    `Failed to update historical student statuses: ${error.message}`
-                );
-            }
-        }
-    }
-}
-
-export async function handleFormUploadBulkAction(formData: FormData) {
-    try {
-        const file = formData.get("inputFile") as File;
-
-        if (!file || file.size === 0) {
-            throw new Error("No file uploaded.");
-        }
-
-        const fileExtension = file.name.split('.').pop()?.toLowerCase();
-        let recordsToInsert: supabaseInsertRows = [];
-        
-        if (fileExtension === "csv") {
-            const textContent = await file.text();
-            const parsed = papa.parse(textContent, {
-                header: true,
-                dynamicTyping: false,
-                skipEmptyLines: true
-            });
-
-            recordsToInsert = parsed.data as supabaseInsertRows;
-        } else if (fileExtension === "xls" || fileExtension === "xlsx") {
-            const bytes = await file.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-
-            // Parse workbook from buffer
-            const workbook = XLSX.read(buffer, {type: "buffer"});
-            const sheetName = workbook.SheetNames[0];
-            const workSheet = workbook.Sheets[sheetName];
-
-            // convert to an array of literals object
-            recordsToInsert = XLSX.utils.sheet_to_json(workSheet, {defval: ""}) as supabaseInsertRows;
-        }
-
-        let castedRecordsToInsert = recordsToInsert.map((row) => {
-            const rawEventYear = row["event_year"];
-            const rawNim = row["nim"];
-
-            return {
-                ...row,
-                nim: rawNim !== undefined && rawNim !== null ? String(rawNim).trim() : "", 
-                event_year: rawEventYear ? parseInt(rawEventYear, 10) : 0
-            };
-        });
-
-        console.log("Parsed data:\n", castedRecordsToInsert);
-
-        const supabase = await supabaseServer();
-        const {error: insertError} = await supabase
-            .from("ie_participations")
-            .insert(castedRecordsToInsert);
-        if (insertError) {
-            throw new Error(
-                `Failed to insert IE participations: ${insertError.message}`
-            );
-        }
-
-        // Synchronize the affected students after a successful insertion.
-        const affectedNims = castedRecordsToInsert.map(
-            (record) => record.nim
-        );
-
-        await syncStudentIeStatuses(supabase, affectedNims);
-
-        console.log(`Successfully inserted ${castedRecordsToInsert.length} participation records and synchronized student statuses.`);
-    } catch(error) {
-        console.error("Failded to parse file:", error);
-    }finally {
-        console.log("insert are successfull.");
-    }
-}
-
-export async function handleSubmitSingleUpdate(formData: FormData) {
-    const nim         = formData.get("nim") as string;
-    const studentName = formData.get("studentName") as string;
-    const major       = formData.get("major") as string;
-    const campus      = formData.get("campus") as string;
-    const eventName   = formData.get("eventName") as string;
-    const eventYear   = Number(formData.get("eventYear"));
-
-    console.log("nim:", nim);
-    console.log("studentName:", studentName);
-    console.log("major:", major);
-    console.log("campus:", campus);
-    console.log("eventName:", eventName);
-    console.log("eventYear:", eventYear);
-
-    const supabase = await supabaseServer();
-
-    const {error} = await supabase
-        .from("ie_participations")
-        .insert({
-            nim: nim,
-            event_name: eventName,
-            event_year: eventYear,
-            campus_location: campus,
-            program_department: major
-        });
-    
-    if (error) {
-        console.error("Feiled To Insert to the IE Participations", error);
-        throw new Error(error.message);
-    }
-
-    await syncStudentIeStatuses(supabase, [nim]);
-
-    console.log(`Successfully inserted participation for student ${nim} and synchronized their statuses.`);
-}
-
 async function newSyncStudentIeStatuses(
     supabase: Awaited<ReturnType<typeof supabaseServer>>,
     inputNims: string[]
@@ -390,10 +187,7 @@ export async function newHandleFormUploadBulkAction(previousState: unknown, form
             }
 
             rawRecords = parsed.data;
-        } else if (
-            fileExtension === "xls" ||
-            fileExtension === "xlsx"
-        ) {
+        } else if (fileExtension === "xls" || fileExtension === "xlsx") {
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
 
@@ -772,28 +566,108 @@ export async function newHandleFormUploadBulkAction(previousState: unknown, form
     }
 }
 
+export async function getStudentByNim(nim: string) {
+    const normalizedNim = String(nim ?? "").trim();
+
+    // Validate the NIM before querying Supabase.
+    if (!/^\d{10}$/.test(normalizedNim)) {
+        return {
+            success: false,
+            message: "NIM must contain exactly 10 digits.",
+            student: null,
+        };
+    }
+
+    try {
+        const supabase = await supabaseServer();
+
+        const { data: student, error } = await supabase
+            .from("students")
+            .select("nim, student_name, program_department")
+            .eq("nim", normalizedNim)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Student lookup failed:", error.message);
+
+            return {
+                success: false,
+                message: "Failed to retrieve student information.",
+                student: null,
+            };
+        }
+
+        if (!student) {
+            return {
+                success: false,
+                message: "Student not found. Please check the NIM.",
+                student: null,
+            };
+        }
+
+        return {
+            success: true,
+            message: "Student found.",
+            student: {
+                nim: student.nim,
+                studentName: student.student_name,
+                major: student.program_department ?? "",
+            },
+        };
+    } catch (error) {
+        console.error("Unexpected student lookup error:", error);
+
+        return {
+            success: false,
+            message: "An unexpected error occurred while searching for the student.",
+            student: null,
+        };
+    }
+}
+
 export async function newHandleSubmitSingleUpdate(previousState: unknown, formData: FormData) {
     try{
         const nim = String(formData.get("nim") ?? "").trim();
-        const studentName = String(formData.get("studentName") ?? "").trim();
-        const major = String(formData.get("major") ?? "").trim();
         const campus = String(formData.get("campus") ?? "").trim();
         const eventName = String(formData.get("eventName") ?? "").trim();
         const eventYear = Number(formData.get("eventYear"));
 
         // Validate the required form fields.
-        if (!nim || !eventName || !Number.isInteger(eventYear) || eventYear <= 0) {
-            throw new Error("Please provide a valid NIM, event name, and event year.");
+        if (!/^\d{10}$/.test(nim)) {
+            throw new Error("NIM must contain exactly 10 digits.");
+        }
+        if (!eventName || !Number.isInteger(eventYear) || eventYear <= 0) {
+            throw new Error("Please provide a valid event name and event year.");
         }
 
         console.log("NIM:", nim);
-        console.log("Student Name:", studentName);
-        console.log("Major:", major);
         console.log("Campus:", campus);
         console.log("Event Name:", eventName);
         console.log("Event Year:", eventYear);
 
         const supabase = await supabaseServer();
+
+        // Retrieve the student using their NIM.
+        const {
+            data: student,
+            error: studentLookupError,
+        } = await supabase
+            .from("students")
+            .select("nim, student_name, program_department")
+            .eq("nim", nim)
+            .maybeSingle();
+
+        if (studentLookupError) {
+            throw new Error(
+                `Failed to retrieve student information: ${studentLookupError.message}`
+            );
+        }
+
+        if (!student) {
+            throw new Error("Student not found. Please check the NIM.");
+        }
+        console.log("Student Name:", student.student_name);
+        console.log("Major:", student.program_department);
 
         // Step 1: Find the event in event_detail.
         const {
@@ -873,9 +747,9 @@ export async function newHandleSubmitSingleUpdate(previousState: unknown, formDa
         } = await supabase
             .from("ie_participations")
             .insert({
-                nim,
+                nim: student.nim,
                 event_id: eventId,
-                program_department: major || null,
+                program_department: student.program_department,
             });
 
         if (participationInsertError) {

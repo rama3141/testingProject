@@ -20,14 +20,16 @@ export default function Navbar() {
 
   // Helper function to apply active styles dynamically
   const getLinkStyle = (path: string) => {
-    const isActive = pathname === path;
-    return {
-      color: isActive ? "#2563EB" : "#646B8B", // Your active vs inactive color
-      textDecoration: "none",
-      borderBottom: isActive ? "2px solid #2563EB" : "2px solid transparent", // Adding line below text
-      paddingBottom: "4px",
-      transition: "all 0.2s ease",
-    };
+    if (path === "/dashboard/ie") {
+      const isActive = pathname === path;
+      return {
+        color: isActive ? "#2563EB" : "#646B8B", // Your active vs inactive color
+        textDecoration: "none",
+        borderBottom: isActive ? "2px solid #2563EB" : "2px solid transparent", // Adding line below text
+        paddingBottom: "4px",
+        transition: "all 0.2s ease",
+      };
+    }
   };
 
   return (
@@ -35,9 +37,7 @@ export default function Navbar() {
       {/* <nav style={{ display: "flex", gap: 32, alignItems: "center" }}> */}
       <nav className="flex gap-[32] items-center">
         <strong>
-          <Link href="/dashboard">
             <p className="text-[21px] text-[#0a0a0a] font-bold">Athena</p>
-          </Link>
         </strong>
         <strong>
           <Link href="/dashboard/ie" style={getLinkStyle("/dashboard/ie")}>
@@ -51,7 +51,9 @@ export default function Navbar() {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Name Cards</NavigationMenuTrigger>
+                <NavigationMenuTrigger>
+                  <p className="text-[#646B8B] text-[16px] font-semibold">Name Cards</p>
+                </NavigationMenuTrigger>
                 <NavigationMenuContent className="bg-[#FFFFFF] rounded-lg">
                     {/* style={getLinkStyle("/dashboard/cards")} */}
                     <NavigationMenuLink href="/dashboard/cards">Profile Register</NavigationMenuLink>

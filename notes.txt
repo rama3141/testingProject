@@ -8,7 +8,6 @@ Rubah code untuk serverAction supaya sesuai dengan rule tables yang terbaru. ✅
 -> handleSubmitSingleUpdate ✅
 -> syncStudentIeStatuses ✅
 -> handleFormUploadBulkAction ✅
-
 Rubah bagian dynamic routing page (bagian student profile page). ✅
 
 22 okt
@@ -16,16 +15,21 @@ Tambahin loading animation dan confirmation pada Upload Bulk dan Single Update d
 -> single update ✅
 -> upload bulk ✅
 
-Reload otomatis setelah SIngle Update dan Upload Bulk.
+23 Okt
+Reload otomatis setelah SIngle Update dan Upload Bulk. ✅
+Nambah pop up massage. ✅
 
-Nambah pop up massage.
- 
+28 OKt
+Buat PPT. ✅
+Push code terbaru ke github testingProject.
+Invite Pak Joddy ke github testingProject.
+Buat supaya auth user direct ke IE Monitoring Page setelah berhasil login. ✅
+
 
 Isi presentasi: 
 Jelasin kontribusi tiap anggota (Apa role yang diambil, apa saja yang dikerjakan secara ringkas oleh orang tersebut).
 Listing fitur-fitur yang sudah diselesaikan dan yang belum diselesaikan.
-Lampirkan Screenshoot dari penjelasan untuk fitur.
 Demonstrasi website-nya.
 
 Penjelasan mengenai mengapa tidak menggunakan aplikasi seperti excel saja ?
-Karena setiap update data-data mahasiswa harus verifikasi dari pihak kampus dulu, tidak real time
+Karena setiap update data-data mahasiswa harus verifikasi dari pihak kampus dulu, tidak real time.

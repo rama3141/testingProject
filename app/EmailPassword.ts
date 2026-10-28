@@ -22,6 +22,6 @@ export async function login(formData: FormData) {
     // clear cache untuk layout, agar UI ter-update ke new auth
     revalidatePath("/", "layout");
 
-    redirect("/dashboard");
+    redirect("/dashboard/ie");
 
 }

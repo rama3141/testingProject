@@ -27,6 +27,7 @@ import {
 
 {/* untuk custom function */}
 import { 
+  getStudentByNim,
   newHandleSubmitSingleUpdate, 
   newHandleFormUploadBulkAction 
 } from "@/lib/customFunction/serverActions";
@@ -66,7 +67,7 @@ const singleUpdateFormFields = [
   { id: "nim"        , label: "NIM (Student ID)", type: "text", placeholder: "Enter NIM..."               },
   { id: "studentName", label: "Student Name"    , type: "text", placeholder: "Student name"               },
   { id: "major"      , label: "Major"           , type: "text", placeholder: "Informatika"                },
-  { id: "campus"     , label: "Campus"          , type: "text", placeholder: "Event campus"               },
+  { id: "campus"     , label: "Event Location"  , type: "text", placeholder: "Event campus"               },
   { id: "eventName"  , label: "Event Name"      , type: "text", placeholder: "e.g., Global Seminar Series"},
   { id: "eventYear"  , label: "Event Year"      , type: "text", placeholder: "2026"                       }
 ];
@@ -110,13 +111,18 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
   const      [showSingleUpdateConfirmation, setShowSingleUpdateConfirmation] = useState(false);
   const                                                  singleUpdateFormRef = useRef<HTMLFormElement>(null);
   const                                                bypassConfirmationRef = useRef(false);
+  const                                                        [nim, setNim] = useState("");
+  const                                        [studentName, setStudentName] = useState("");
+  const                                                    [major, setMajor] = useState("");
+  const                        [studentLookupStatus, setStudentLookupStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const                      [studentLookupMessage, setStudentLookupMessage] = useState("");
   //-----------------------------------------------------------------------------------------------------
   const                                    [selectedMajor, setSelectedMajor] = useState<string | null>(null);
   const                                  [selectedCampus, setSelectedCampus] = useState<string | null>(null);
   const                                    [selectedBatch, setSelectedBatch] = useState<string | null>(null);
   const                              [selectedIEStatus, setSelectedIEStatus] = useState<boolean | null>(null);
   //-----------------------------------------------------------------------------------------------------
-  const                                [isResetFIleName, setIsResetFIleName] = useState(false);
+  const                                [isResetFileName, setIsResetFIleName] = useState(false);
   const          [showUploadBulkConfirmation, setShowUploadBulkConfirmation] = useState(false);
   const                                                    uploadBulkFormRef = useRef<HTMLFormElement>(null);
   //-----------------------------------------------------------------------------------------------------
@@ -217,6 +223,68 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
   }
   }, [processingBulkState]);
 
+  useEffect(() => {
+    // Clear the previous result whenever the NIM is incomplete.
+    if (!/^\d{10}$/.test(nim)) {
+      setStudentName("");
+      setMajor("");
+      setStudentLookupMessage("");
+
+      setStudentLookupStatus("idle");
+      return;
+    }
+
+    let ignoreResult = false;
+
+    async function lookupStudent() {
+      setStudentLookupStatus("loading");
+      setStudentLookupMessage("Searching for student...");
+
+      // Clear the previous student's information while searching.
+      setStudentName("");
+      setMajor("");
+
+      try {
+        const result = await getStudentByNim(nim);
+
+        // Ignore a result if the NIM changed while the request was running.
+        if (ignoreResult) return;
+
+        if (result.success && result.student) {
+          setStudentName(result.student.studentName);
+          setMajor(result.student.major);
+
+          setStudentLookupStatus("success");
+          setStudentLookupMessage("Student found.");
+        } else {
+          setStudentName("");
+          setMajor("");
+
+          setStudentLookupStatus("error");
+          setStudentLookupMessage(result.message);
+        }
+      } catch (error) {
+        if (ignoreResult) return;
+
+        console.error("Student lookup error:", error);
+
+        setStudentName("");
+        setMajor("");
+
+        setStudentLookupStatus("error");
+        setStudentLookupMessage(
+          "Unable to search for the student. Please try again."
+        );
+      }
+    }
+
+    lookupStudent();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, [nim]);
+
   const completedIE = students.filter( (student) => student.ie_status ).length;
   const completedIEPercentage = (students.length === 0 ? 0 : Math.round((completedIE / students.length) * 100));
 
@@ -276,7 +344,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
             onClick={handleChooseFile}
             className="flex h-[58px] w-[148px] items-center justify-center gap-2 rounded-xl border-2 border-[#2563EB] px-4 font-semibold text-[#1E293B] hover:cursor-pointer"
           >
-            {selectedFile && !isResetFIleName ? (
+            {selectedFile && !isResetFileName ? (
               <span className="max-w-[100px] truncate">
                 {selectedFile.name}
               </span>
@@ -613,14 +681,35 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                         >
                           {singleUpdateFormFields[0].label}
                         </label>
-                        <div className="w-[464px] h-[42px] mt-[8px] border border-[#E2E8F0] rounded-xl">
-                          <input 
+                        <div className="flex w-[464px] h-[42px] mt-[8px] border border-[#E2E8F0] rounded-xl">
+                          <input
+                            id={singleUpdateFormFields[0].id} 
                             type={singleUpdateFormFields[0].type}
                             name={singleUpdateFormFields[0].id}
                             placeholder={singleUpdateFormFields[0].placeholder}
-                            className="outline-none w-[450px]"
+                            value={nim}
+                            onChange={(event) => {
+                              const digitsOnly = event.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10);
+
+                              setNim(digitsOnly);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]{10}"
+                            maxLength={10}
+                            minLength={10}
+                            autoComplete="off"
                             required
+                            className="outline-none w-[450px]"
                           />
+                          <button
+                            type="button"
+                            aria-label="Student lookup runs automatically when the NIM reaches 10 digits"
+                            className="hover:bg-[#edb10a] hover:cursor-pointer"
+                          >
+                            <Image src={searchIcon} alt="searchIcon"/>
+                          </button>
                         </div>
                       </div> {/* Bagian field NIM */}
 
@@ -633,12 +722,15 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                             {singleUpdateFormFields[1].label}
                           </label>
                           <div className="w-[226px] h-[42px] border border-[#E2E8F0] bg-[#F1F5F9] rounded-xl">
-                            <input 
+                            <input
+                              id={singleUpdateFormFields[1].id} 
                               type={singleUpdateFormFields[1].type}
                               name={singleUpdateFormFields[1].id}
                               placeholder={singleUpdateFormFields[1].placeholder}
+                              value={studentName}
+                              readOnly
+                              required
                               className="outline-none w-[200px]"
-                              required 
                             />
                           </div>
                         </div> {/* Bagian field Student Name */}
@@ -651,33 +743,39 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                           </label>
                           <div className="w-[226px] h-[42px] border border-[#E2E8F0] bg-[#F1F5F9] rounded-xl">
                             <input
+                              id={singleUpdateFormFields[2].id}
                               type={singleUpdateFormFields[2].type}
                               name={singleUpdateFormFields[2].id}
                               placeholder={singleUpdateFormFields[2].placeholder}
-                              className="outline-none w-[200px]"
+                              value={major}
+                              readOnly
                               required
+                              className="outline-none w-[200px]"
                             />
                           </div>
                         </div> {/* Bagian field Major */}
                       </div> {/* Bagian field Student Name & Major */}
-
-                      <div className="mt-[16px]"> {/* Bagian field Campus */}   
-                        <label 
-                          htmlFor={singleUpdateFormFields[3].id}
-                          className="text-[13px] font-semibold"
+                      {studentLookupStatus !== "idle" && (
+                        <p
+                          role="status"
+                          aria-live="polite"
+                          className={`mt-2 text-[12px] ${
+                            studentLookupStatus === "success"
+                              ? "text-green-600"
+                              : studentLookupStatus === "error"
+                                ? "text-red-600"
+                                : "text-slate-500"
+                          }`}
                         >
-                          {singleUpdateFormFields[3].label}
-                        </label>
-                        <div className="w-[226px] h-[42px] border border-[#E2E8F0] bg-[#F1F5F9] rounded-xl">
-                          <input
-                            type={singleUpdateFormFields[3].type}
-                            name={singleUpdateFormFields[3].id}
-                            placeholder={singleUpdateFormFields[3].placeholder}
-                            className="outline-none w-[200px]"
-                            required
-                          />
-                        </div>
-                      </div> {/* Bagian field Campus */}  
+                          {studentLookupMessage}
+                        </p>
+                      )}
+
+                      {studentLookupStatus === "idle" && nim.length > 0 && (
+                        <p className="mt-2 text-[12px] text-slate-500">
+                          Enter {10 - nim.length} more digit{10 - nim.length === 1 ? "" : "s"}.
+                        </p>
+                      )}  
                     </div>{/* Bagian STUDENT INFORMATION */}
 
                     <div className="mt-[20px]"> {/* Bagian Garis Horizontal */}
@@ -707,6 +805,24 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                           />
                         </div>
                       </div> {/* Bagian field Event Name */}
+
+                      <div className="mt-[16px]"> {/* Bagian field event location */}   
+                        <label 
+                          htmlFor={singleUpdateFormFields[3].id}
+                          className="text-[13px] font-semibold"
+                        >
+                          {singleUpdateFormFields[3].label}
+                        </label>
+                        <div className="w-[464px] h-[42px] border border-[#E2E8F0] rounded-xl">
+                          <input
+                            type={singleUpdateFormFields[3].type}
+                            name={singleUpdateFormFields[3].id}
+                            placeholder={singleUpdateFormFields[3].placeholder}
+                            className="outline-none w-[200px]"
+                            required
+                          />
+                        </div>
+                      </div> {/* Bagian field event location */}
 
                       <div className="mt-[16px]"> {/* Bagian field Event Year */}
                         <label 
