@@ -52,7 +52,7 @@ export default function Navbar() {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuTrigger>
-                  <p className="text-[#646B8B] text-[16px] font-semibold">Name Cards</p>
+                  <p className="text-[#646B8B] text-[16px] font-semibold">Business Cards</p>
                 </NavigationMenuTrigger>
                 <NavigationMenuContent className="bg-[#FFFFFF] rounded-lg">
                     {/* style={getLinkStyle("/dashboard/cards")} */}

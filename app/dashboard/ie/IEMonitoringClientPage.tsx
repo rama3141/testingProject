@@ -30,7 +30,7 @@ import {
   getStudentByNim,
   newHandleSubmitSingleUpdate, 
   newHandleFormUploadBulkAction 
-} from "@/lib/customFunction/serverActions";
+} from "@/lib/customFunction/ieServerActions";
 
 {/* Untuk Pop Up massage */}
 import ToastNotification from "./ToastNotification";
@@ -52,7 +52,7 @@ type Student = {
   graduation_status: string | null;
   ie_status: boolean;
   ie_status_wisuda: boolean;
-};
+}; 
 
 type IEMonitoringClientProps = {
   students: Student[];
@@ -213,6 +213,8 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
         processingBulkState.message ??
         "Bulk upload completed successfully.",
     });
+    setIsResetFIleName(true);
+    setSelectedFile(null);
   } else if (processingBulkState?.success === false) {
     setToast({
       type: "error",
@@ -220,6 +222,8 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
         processingBulkState.message ??
         "Bulk upload failed.",
     });
+    setIsResetFIleName(true);
+    setSelectedFile(null);
   }
   }, [processingBulkState]);
 
@@ -359,7 +363,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
           {/* upload Bulk button */}
           <button
             type="button"
-            disabled={!selectedFile || isProcessingBulkPending}
+            disabled={!selectedFile || isProcessingBulkPending || isResetFileName}
             onClick={() => setShowUploadBulkConfirmation(true)}
             className={`flex h-[58px] w-[180px] items-center justify-center gap-2 rounded-xl px-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer 
                        ${isProcessingBulkPending ? "bg-[#636465]" : "bg-[#2563EB]"}`}

@@ -82,7 +82,7 @@ const actionButtonStyle: React.CSSProperties = {
   border: 0,
 };
 
-const fieldStyle: React.CSSProperties = {
+const fieldStyle: React.CSSProperties = { 
   width: "100%",
   minWidth: 0,
   marginTop: 5,
@@ -155,7 +155,7 @@ export default function PartnerViewMenuClientPage({
 
   return (
     <main className="mx-auto mt-3 mb-12 box-border w-[85.3vw] max-w-[1400px] text-[11px] text-[#182238] max-[640px]:mx-4 max-[640px]:w-[calc(100%-2rem)]">
-      <header className="mb-6">
+      <header className="mt-[72px] mb-6">
         <h1 className="m-0 text-[25px] font-bold leading-tight tracking-[-0.75px] text-[#151d30]">
           Partner Data
         </h1>

@@ -92,7 +92,7 @@ export default async function StudentProfilePage({params,}: {params: Promise<{ni
 
         return {
             ...participation,
-            event,
+            event, 
         };
     }).filter((participation) => participation !== null).sort(
         (a, b) => b.event.event_year - a.event.event_year

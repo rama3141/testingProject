@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
   // 2. If user IS logged in and tries to access login (/), send to dashboard
   if (user && currentPath === "/") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/dashboard/ie";
     return NextResponse.redirect(url);
   }
 

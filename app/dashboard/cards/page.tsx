@@ -13,6 +13,8 @@ import scanIcon from "@/public/scan_ocr_icon.png"
 import saveInputIcon from "@/public/save_file_icon.png"
 import resetInputIcon from "@/public/reset_input_icon.png"
 
+import {handleSubmitUploadForm} from "@/lib/customFunction/businessServerActions"
+
 // TODO(squad-2): sambungkan Save ke Supabase via lib/api-service/cards.ts (+ upload `image` ke Storage)
 const EMPTY_DRAFT = {
   full_name: "",
@@ -57,21 +59,21 @@ function joinFullName(firstName: string, lastName: string) {
 export default function CardsPage() {
   {/* Inisialisasi React hook ⬇️*/}
     {/* Bagian selain camera */}
-  const       [draft, setDraft] = useState(EMPTY_DRAFT);
+  const                  [draft, setDraft] = useState(EMPTY_DRAFT);
   // Input nama dipegang mentah di state sendiri supaya user bisa mengetik spasi;
   // draft.full_name tetap jadi nilai kanonik yang dikirim ke DB.
-  const [nameParts, setNameParts] = useState({ firstName: "", lastName: "" });
-  const       [image, setImage] = useState<File | null>(null);
-  const   [preview, setPreview] = useState<string | null>(null);
-  const   [loading, setLoading] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const            fileInputRef = useRef<HTMLInputElement>(null);
+  const          [nameParts, setNameParts] = useState({ firstName: "", lastName: "" });
+  const                  [image, setImage] = useState<File | null>(null);
+  const              [preview, setPreview] = useState<string | null>(null);
+  const              [loading, setLoading] = useState(false);
+  const            [ocrError, setOcrError] = useState<string | null>(null);
+  const                       fileInputRef = useRef<HTMLInputElement>(null);
 
     {/* Bagian camera */}
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const                           videoRef = useRef<HTMLVideoElement>(null);
+  const                          streamRef = useRef<MediaStream | null>(null);
   const [isCameraAtive, setIsCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const      [cameraError, setCameraError] = useState<string | null>(null);
   {/* Inisialisasi React hook ⬆️*/}
 
 
@@ -379,7 +381,7 @@ export default function CardsPage() {
         </div>
 
         <div className="flex w-[1173px] mt-[16px]"> {/* Form label, input, and submit, reset button */}
-          <form className="px-[20px]">
+          <form action={handleSubmitUploadForm} className="px-[20px]">
             <div className="flex gap-[16px]"> {/*  First name and Last name part */}
               <div>
                 <label htmlFor={formFields[0].id} className="text-[14px] text-[#314158]">{formFields[0].label}</label>
@@ -464,7 +466,6 @@ export default function CardsPage() {
                     value={draft[formFields[5].key]}
                     onChange={(e) => setField(formFields[5].key, e.target.value)}
                     className="outline-none w-[578px]"
-                    required
                   />
                 </div>
               </div>
@@ -494,7 +495,6 @@ export default function CardsPage() {
                     value={draft[formFields[7].key]}
                     onChange={(e) => setField(formFields[7].key, e.target.value)}
                     className="outline-none w-[578px]"
-                    required
                   />
                 </div>
               </div>
@@ -531,8 +531,8 @@ export default function CardsPage() {
             <div className="flex mt-[32px] gap-[12px] mb-[22px]">
               <div>
                 <button
-                  type="button"
-                  className="w-[104px] h-[40px] bg-[#155DFC] border rounded-xl border-[#CAD5E2] shadow-2xs"
+                  type="submit"
+                  className="w-[104px] h-[40px] bg-[#155DFC] border rounded-xl border-[#CAD5E2] shadow-2xs hover:cursor-pointer"
                 >
                   <div className="flex items-center gap-[6px]">
                     <div>
@@ -548,7 +548,7 @@ export default function CardsPage() {
                 <button
                   type="button"
                   onClick={resetAll}
-                  className="w-[104px] h-[40px] border rounded-xl border-[#CAD5E2] shadow-2xs"
+                  className="w-[104px] h-[40px] border rounded-xl border-[#CAD5E2] shadow-2xs hover:cursor-pointer"
                 >
                   <div className="flex items-center gap-[6px]">
                     <div>
@@ -561,7 +561,7 @@ export default function CardsPage() {
                 </button>
               </div>
             </div>
-
+            
           </form>
         </div>
       </div>

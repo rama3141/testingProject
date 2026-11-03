@@ -10,7 +10,7 @@ import React, { useActionState, useRef, useState } from "react";
 import chooseFileIcon from "@/public/choose_file_icon.png"
 import uploadIcon from "@/public/upload_icon.png"
  
-import { handleFormUploadBulkAction } from "@/lib/customFunction/serverActions" 
+import { handleFormUploadBulkAction } from "@/lib/customFunction/ieServerActions" 
 
 type Student = {
   nim: string;
