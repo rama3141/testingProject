@@ -1,6 +1,6 @@
 "use client";
 
-import { login } from "./EmailPassword";
+import { login } from "@/lib/customFunction/userAction";
 import { useState, useEffect } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client"
 import { User } from "@supabase/supabase-js";
@@ -113,11 +113,6 @@ export default function LoginPage({ user }: EmailPasswordLibProps) {
           </button>
         </form>
       </div>
-
-      {/* =====================================================
-          FOOTER
-          ===================================================== */}
-
     </div>
   );
 }

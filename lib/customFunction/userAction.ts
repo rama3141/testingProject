@@ -21,7 +21,23 @@ export async function login(formData: FormData) {
 
     // clear cache untuk layout, agar UI ter-update ke new auth
     revalidatePath("/", "layout");
-
     redirect("/dashboard/ie");
-
 }
+
+export async function signOutAction(previousState: unknown) {
+    const supabase = await createSupabaseServerClient();
+
+    // Sign out the current user from Supabase
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+        console.error("Supabase sign out error:", error);
+        return;
+    }
+
+    // Clear cached UI related to authentication
+    revalidatePath("/", "layout");
+
+    // Redirect to login page
+    redirect("/");
+} 

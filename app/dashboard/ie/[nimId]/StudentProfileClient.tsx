@@ -1,15 +1,21 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
-import previousArrowIcon from "@/public/previousArrowIcon.png"
+import { useRef, useState, useActionState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation"; 
 
- 
-const csvData = [
-    {eventName: "Seminar Nasional Teknologi Digital",  date: "18 Mei 2026", campusLocation: "Anggrek",    status: true},
-    {eventName: "BINUS Festival 2026",                 date: "12 Apr 2026", campusLocation: "Alam Sutra", status: true},
-    {eventName: "Workshop UI/UX untuk Produk Digital", date: "22 Feb 2026", campusLocation: "Semarang",   status: true},
-    {eventName: "Pengabdian Masyarakat Kemanggisan",   date: "16 Nov 2025", campusLocation: "Bekasi",     status: false}
-];
+import previousArrowIcon from "@/public/previousArrowIcon.png"
+import edit_icon from "@/public/edit_icon.png"
+import delete_icon from "@/public/delete_icon.png"
+
+import {
+    handleDeleteStudentParticipation,
+    handleEditStudentParticipation
+} from "@/lib/customFunction/ieServerActions";
+
+import ToastNotification from "../ToastNotification";
 
 type Student = {
   nim: string;
@@ -51,9 +57,88 @@ type StudentProfileClientProps = {
   participations: IEParticipation[];
 };
 
+const actionButtonStyle: React.CSSProperties = {
+  padding: 0,
+  fontSize: 11,
+  lineHeight: 1,
+  border: 0,
+};
 
-export default async function StudentProfilePage({student, participations,}: StudentProfileClientProps) {
+type ToastState = {
+  type: "success" | "error";
+  message: string;
+};
+
+export default function StudentProfilePage({student, participations,}: StudentProfileClientProps) {
+    const router = useRouter();
+    //-----------------------------------------------------------------------------------------------------
+    const                                   [selectedParticipation, setSelectedParticipation] = useState<IEParticipation | null>(null); // Selected participation to delete
+    //-----------------------------------------------------------------------------------------------------
+    const       [showDeleteParticipationConfirmation, setShowDeleteParticipationConfirmation] = useState(false); // Delete confirmation modal
+    const [deleteParticipationState, deleteParticipationAction, isDeleteParticipationPending] = useActionState(handleDeleteStudentParticipation, {success: false,message: ""});
+    //-----------------------------------------------------------------------------------------------------
+    const           [showEditParticipationConfirmation, setShowEditParticipationConfirmation] = useState(false);
+    const                           [showEditParticipationForm, setShowEditParticipationForm] = useState(false);
+    const       [editParticipationState, editParticipationAction, isEditParticipationPending] = useActionState(handleEditStudentParticipation, {success: false, message: ""});
+    //-----------------------------------------------------------------------------------------------------
+    const                                                                   [toast, setToast] = useState<ToastState | null>(null);
+    //-----------------------------------------------------------------------------------------------------
+    const closeToast = useCallback(() => {
+        setToast(null);
+    }, []);
+
+    // Refresh page after successful delete
+    useEffect(() => {
+        if (deleteParticipationState?.success === true) {
+            router.refresh();
+        }
+    }, [deleteParticipationState, router]);
+
+    // Handle Delete Toast Notification
+    useEffect(() => {
+        if (!deleteParticipationState.message) return;
+        if (deleteParticipationState?.success === true) {
+            setToast({
+                type: "success",
+                message: deleteParticipationState.message
+            });
+            setSelectedParticipation(null);
+        } else if (deleteParticipationState?.success === false) {
+            setToast({
+                type: "error",
+                message: deleteParticipationState.message
+            });
+            setSelectedParticipation(null);
+        }
+    }, [deleteParticipationState]);
+
+    // Refresh page after successful edit
+    useEffect(() => {
+        if (editParticipationState?.success === true) {
+            router.refresh();
+        }
+    }, [editParticipationState, router]);
+
+    // Handle Edit Toast Notification
+    useEffect(() => {
+        if (!editParticipationState.message) return;
+        if (editParticipationState.success === true) {
+            setToast({
+                type: "success",
+                message: editParticipationState.message
+            });
+            setShowEditParticipationForm(false);
+            setSelectedParticipation(null);
+        } else if (editParticipationState.success === false) {
+            setToast({
+                type: "error",
+                message: editParticipationState.message
+            });
+        }
+    }, [editParticipationState]);
+
     return (
+        <>
         <div className="w-full ml-[7.847vw] mt-[121px] mb-[224px]"> {/* mt-[72 + 49] */}
             <div className="flex w-[167px] h-[19px] gap-[8px] items-center"> {/* Untuk link ke previous page, bisa dibilang ke page IE Monitoring awal */}
                 <div> {/* Icon Arrow ke kiri */}
@@ -103,8 +188,8 @@ export default async function StudentProfilePage({student, participations,}: Stu
 
                 <div className="mt-[24px]"> {/* Garis pembatas */}
                     <hr className="w-[1172px] border border-[#E2E8F0]"/>
-                </div>
-
+                </div> 
+ 
                 <div className="flex w-[1172px] h-[38px] mt-[24px] gap-[48px]"> {/* bagian program department, dan campus*/}
                     <div className="w-[562px] h-[38px]"> {/* Bagian Program Department */}
                         <p className="text-[12px] text-[#64748B]">Program Department</p>
@@ -131,14 +216,17 @@ export default async function StudentProfilePage({student, participations,}: Stu
                     <table>
                         <thead>
                             <tr className="bg-[#F8FAFC] h-[42px]">
-                                <th className="w-[374px] pt-[14px] pb-[15px] text-left border border-[#ddd]">
+                                <th className="w-[374px] pt-[14px] pb-[15px] text-left border-b border-t border-[#ddd]">
                                     <p className="ml-[24px] text-[#64748B] text-[11px]">EVENT NAME</p>
                                 </th>
-                                <th className="w-[304px] pt-[14px] pb-[15px] text-left border border-[#ddd]">
+                                <th className="w-[304px] pt-[14px] pb-[15px] text-left border-b border-t border-[#ddd]">
                                     <p className="ml-[24px] text-[#64748B] text-[11px]">EVENT YEAR</p>
                                 </th>
-                                <th className="w-[304px] pt-[14px] pb-[15px] text-left border border-[#ddd]">
+                                <th className="w-[304px] pt-[14px] pb-[15px] text-left border-b border-t border-[#ddd]">
                                     <p className="ml-[24px] text-[#64748B] text-[11px]">EVENT LOCATION</p>
+                                </th>
+                                <th className="w-[100px] pt-[14px] pb-[15px] text-center border-b border-t border-[#ddd]">                                  
+                                    <p className="text-[#64748B] text-[11px]">ACTION</p>
                                 </th>
                             </tr>
                         </thead>
@@ -146,14 +234,42 @@ export default async function StudentProfilePage({student, participations,}: Stu
                         <tbody>
                             {participations.map((event) => (
                             <tr key={event.id}>
-                                <td className="h-[58px] border border-[#ddd] pt-[19.5px] pb-[19.5px] text-left">
+                                <td className="h-[58px] border-b border-[#ddd] pt-[19.5px] pb-[19.5px] text-left">
                                     <p className="ml-[24px] text-[14px] font-semibold text-[#0F172A]">{event.event.event_name}</p>    
                                 </td>
-                                <td className="h-[58px] border border-[#ddd] pt-[21px] pb-[18px] text-left">
+                                <td className="h-[58px] border-b border-[#ddd] pt-[21px] pb-[18px] text-left">
                                     <p className="ml-[24px] text-[14px] text-[#64748B]">{event.event.event_year}</p>
                                 </td>
-                                <td className="h-[58px] border border-[#ddd] pt-[15px] pb-[24px] text-left">
+                                <td className="h-[58px] border-b border-[#ddd] pt-[15px] pb-[24px] text-left">
                                     <p className="ml-[24px] text-[14px] text-[#64748B]">{event.event.event_location ?? "Not specified"}</p>
+                                </td>
+                                <td className="h-[53px] border-b border-[#ddd] px-[10px] align-middle">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button
+                                            type="button"
+                                            title="Edit event"
+                                            className="inline-flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-[6px] bg-[#f0f4f8] text-[#43546b] hover:bg-[#e2eaf3] hover:cursor-pointer"
+                                            style={actionButtonStyle}
+                                            onClick={() => {
+                                                setSelectedParticipation(event);
+                                                setShowEditParticipationForm(true);
+                                            }}
+                                        >
+                                            <Image src={edit_icon} alt="editIcon"/>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            title="Delete event"
+                                            className="inline-flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-[6px] bg-[#ffe6e6] text-[#fa2828] hover:bg-[#ffd4d4] hover:cursor-pointer"
+                                            style={actionButtonStyle}
+                                            onClick={() => {
+                                                setSelectedParticipation(event);
+                                                setShowDeleteParticipationConfirmation(true);
+                                            }}
+                                        >
+                                            <Image src={delete_icon} alt="deleteIcon"/>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             ))}
@@ -165,5 +281,197 @@ export default async function StudentProfilePage({student, participations,}: Stu
                 </div>
             </div>
         </div>
+
+        {showDeleteParticipationConfirmation && selectedParticipation ? 
+            (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
+                    <div className="w-[420px] rounded-xl bg-white p-6 shadow-xl">
+
+                        {/* Modal Header */}
+                        <h2 className="text-[18px] font-semibold text-[#0F172A]">Delete IE Event?</h2>
+
+                        {/* Modal Description */}
+                        <p className="mt-3 text-[14px] leading-6 text-[#64748B]">
+                            Are you sure you want to delete this student's
+                            participation in:
+                        </p>
+
+                        {/* Selected Event */}
+                        <div className="mt-3 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                            <p className="text-[14px] font-semibold text-[#0F172A]">{selectedParticipation.event.event_name}</p>
+                            <p className="mt-1 text-[13px] text-[#64748B]">
+                                {selectedParticipation.event.event_year}
+                                {" · "}
+                                {selectedParticipation.event.event_location ?? "Not specified"}
+                            </p>
+                        </div>
+
+                        <p className="mt-3 text-[12px] text-[#DC2626]">This action cannot be undone.</p>
+
+                        {/* Modal Actions */}
+                        <form action={deleteParticipationAction}>
+                            <input
+                                type="hidden"
+                                name="participationId"
+                                value={selectedParticipation.id}
+                            />
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                {/* Cancel Button */}
+                                <button
+                                    type="button"
+                                    disabled={isDeleteParticipationPending}
+                                    onClick={() => {
+                                        setShowDeleteParticipationConfirmation(false);
+                                        setSelectedParticipation(null);
+                                    }}
+                                    className="h-[38px] rounded-lg border border-[#CBD5E1] px-4 text-[13px] font-semibold text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+
+                                {/* Delete Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isDeleteParticipationPending}
+                                    className="h-[38px] min-w-[120px] rounded-lg bg-[#DC2626] px-4 text-[13px] font-semibold text-white hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {isDeleteParticipationPending ? "Deleting..." : "Delete Event"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )
+            :
+            null
+        }
+
+        {/* Edit IE Event Modal */}
+        {showEditParticipationForm && selectedParticipation ? 
+            (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
+                    <div className="w-[480px] rounded-xl bg-white p-6 shadow-xl">
+                        {/* Modal Header */}
+                        <h2 className="text-[18px] font-semibold text-[#0F172A]">Edit IE Event</h2>
+                        <p className="mt-2 text-[13px] text-[#64748B]">Update the student's event participation information.</p>
+
+                        {/* Edit Form */}
+                        <form action={editParticipationAction}>
+                            {/* Participation UUID */}
+                            <input
+                                type="hidden"
+                                name="participationId"
+                                value={selectedParticipation.id}
+                            />
+
+                            {/* Event Name */}
+                            <div className="mt-5">
+                                <label
+                                    htmlFor="editEventName"
+                                    className="mb-2 block text-[13px] font-semibold text-[#334155]"
+                                >
+                                    Event Name
+                                </label>
+
+                                <input
+                                    id="editEventName"
+                                    type="text"
+                                    name="eventName"
+                                    defaultValue={selectedParticipation.event.event_name}
+                                    required
+                                    maxLength={255}
+                                    disabled={isEditParticipationPending}
+                                    className="h-[42px] w-full rounded-lg border border-[#CBD5E1] px-3 text-[13px] text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] disabled:bg-[#F8FAFC]"
+                                />
+                            </div>
+
+                            {/* Event Year */}
+                            <div className="mt-4">
+                                <label
+                                    htmlFor="editEventYear"
+                                    className="mb-2 block text-[13px] font-semibold text-[#334155]"
+                                >
+                                    Event Year
+                                </label>
+
+                                <input
+                                    id="editEventYear"
+                                    type="number"
+                                    name="eventYear"
+                                    defaultValue={selectedParticipation.event.event_year}
+                                    min={1900}
+                                    max={2200}
+                                    required
+                                    disabled={isEditParticipationPending}
+                                    className="h-[42px] w-full rounded-lg border border-[#CBD5E1] px-3 text-[13px] text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] disabled:bg-[#F8FAFC]"
+                                />
+                            </div>
+
+                            {/* Event Location */}
+                            <div className="mt-4">
+                                <label
+                                    htmlFor="editEventLocation"
+                                    className="mb-2 block text-[13px] font-semibold text-[#334155]"
+                                >
+                                    Event Location
+                                </label>
+
+                                <input
+                                    id="editEventLocation"
+                                    type="text"
+                                    name="eventLocation"
+                                    defaultValue={selectedParticipation.event.event_location ?? ""}
+                                    maxLength={255}
+                                    disabled={isEditParticipationPending}
+                                    placeholder="Enter event location"
+                                    className="h-[42px] w-full rounded-lg border border-[#CBD5E1] px-3 text-[13px] text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] disabled:bg-[#F8FAFC]"
+                                />
+                            </div>
+
+                            {/* Modal Actions */}
+                            <div className="mt-7 flex justify-end gap-3">
+                                {/* Cancel Button */}
+                                <button
+                                    type="button"
+                                    disabled={isEditParticipationPending}
+                                    onClick={() => {
+                                        setShowEditParticipationForm(false);
+                                        setSelectedParticipation(null);
+                                    }}
+                                    className="h-[38px] rounded-lg border border-[#CBD5E1] px-4 text-[13px] font-semibold text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+
+                                {/* Update Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isEditParticipationPending}
+                                    className="h-[38px] min-w-[120px] rounded-lg bg-[#2563EB] px-4 text-[13px] font-semibold text-white hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {isEditParticipationPending ? "Updating..." : "Update Event"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )
+            :
+            null
+        }
+        
+        {toast ? 
+            (
+                <ToastNotification
+                type={toast.type}
+                message={toast.message}
+                onClose={closeToast}
+                />
+            )
+            :
+            null
+        }
+        </>
     ); 
 }

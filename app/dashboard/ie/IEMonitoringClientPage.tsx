@@ -8,12 +8,13 @@ import { useRouter } from "next/navigation"
 import React, { useRef, useState, useActionState, useEffect, useCallback} from "react";
 
 {/* Untuk image, icon */}
-import peopleIcon from "@/public/people_icon.png"
+import studentCountIcon from "@/public/people_icon.png"
 import clockIcon from "@/public/clock_icon.png"
 import chooseFileIcon from "@/public/choose_file_icon.png"
 import uploadIcon from "@/public/upload_icon.png"
 import searchIcon from "@/public/search_icon.png"
-import singleUpdateIcon from "@/public/singleUpdateIcon.png"
+import singleUpdateIcon from "@/public/single_update_icon.png"
+import registerStudenrIcon from "@/public/register_student_icon.png"
 
 {/* navbar dropdown dari shadCN */}
 import {
@@ -28,8 +29,9 @@ import {
 {/* untuk custom function */}
 import { 
   getStudentByNim,
-  newHandleSubmitSingleUpdate, 
-  newHandleFormUploadBulkAction 
+  handleSubmitSingleUpdate, 
+  handleFormUploadBulkAction,
+  handleRegisterStudentBulk 
 } from "@/lib/customFunction/ieServerActions";
 
 {/* Untuk Pop Up massage */}
@@ -100,57 +102,95 @@ const ieStatusOptions = [
   "false"
 ];
 
+/* 
+penamaan singkat :
+IEP = IE Participation
+SU  = Single Update
+SR  = Student Registration
+*/
 
-export default function IEPage({students,}: IEMonitoringClientProps) {
+export default function IEPage({students,}: IEMonitoringClientProps) { 
   const router = useRouter(); 
+  //-----------------------------------------------------------------------------------------------------
+  const                                                     [ieParticipationSelectedFile, setIeParticipationSelectedFile] = useState<File | null>(null);
+  const                                                                                       ieParticipationFileInputRef = useRef<HTMLInputElement>(null);
+  const                                               [isResetIeParticipationFileName, setIsResetIeParticipationFileName] = useState(false);
+  const                         [showIeParticipationUploadBulkConfirmation, setShowIeParticipationUploadBulkConfirmation] = useState(false);
+  const                                                                                  ieParticipationUploadBulkFormRef = useRef<HTMLFormElement>(null);
+  const [processingIeParticipationBulkState, processingIeParticipationBulkAction, isProcessingIeParticipationBulkPending] = useActionState(handleFormUploadBulkAction, null);
+  //-----------------------------------------------------------------------------------------------------
+  const                                                                           [showSingleUpdate, setShowSingleUpdate] = useState(false);
+  const                                                   [showSingleUpdateConfirmation, setShowSingleUpdateConfirmation] = useState(false);
+  const                                                                                               singleUpdateFormRef = useRef<HTMLFormElement>(null);
+  const                                                                                 singleUpdateBypassConfirmationRef = useRef(false);
+  const                                                                                                     [nim, setNim] = useState("");
+  const                                                                                     [studentName, setStudentName] = useState("");
+  const                                                                                                 [major, setMajor] = useState("");
+  const                                                                     [studentLookupStatus, setStudentLookupStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const                                                                   [studentLookupMessage, setStudentLookupMessage] = useState("");
+  const                                                    [singleUpdateState, singleUpdateAction, isSingleUpdatePending] = useActionState(handleSubmitSingleUpdate, null);
+  //-----------------------------------------------------------------------------------------------------
+  const                                                   [showStudentRegistModalDialog, setshowStudentRegistModalDialog] = useState(false);
+  const                                                         [studentRegistSelectedFile, setStudentRegistSelectedFile] = useState<File | null>(null);
+  const                                                                                         studentRegistFileInputRef = useRef<HTMLInputElement>(null);
+  const                                                   [isResetStudentRegistFileName, setIsResetStudentRegistFileName] = useState(false);
+  const                             [showStudentRegistUploadBulkConfirmation, setShowStudentRegistUploadBulkConfirmation] = useState(false);
+  const                                                                                    studentRegistUploadBulkFormRef = useRef<HTMLFormElement>(null);
+  const       [processingStudentRegistBulkState, processingStudentRegistBulkAction, isProcessingStudentRegistBulkPending] = useActionState(handleRegisterStudentBulk, null);
+  //-----------------------------------------------------------------------------------------------------
+  const                                                                                 [selectedMajor, setSelectedMajor] = useState<string | null>(null);
+  const                                                                               [selectedCampus, setSelectedCampus] = useState<string | null>(null);
+  const                                                                                 [selectedBatch, setSelectedBatch] = useState<string | null>(null);
+  const                                                                           [selectedIEStatus, setSelectedIEStatus] = useState<boolean | null>(null);
+  const                                                                                     [searchQuery, setSearchQuery] = useState("");
+  //-----------------------------------------------------------------------------------------------------
+  const                                                                                                 [toast, setToast] = useState<ToastState | null>(null);
+  //-----------------------------------------------------------------------------------------------------
   
-  const                                      [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const                                                         fileInputRef = useRef<HTMLInputElement>(null);
-  //-----------------------------------------------------------------------------------------------------
-  const                              [showSingleUpdate, setShowSingleUpdate] = useState(false);
-  const      [showSingleUpdateConfirmation, setShowSingleUpdateConfirmation] = useState(false);
-  const                                                  singleUpdateFormRef = useRef<HTMLFormElement>(null);
-  const                                                bypassConfirmationRef = useRef(false);
-  const                                                        [nim, setNim] = useState("");
-  const                                        [studentName, setStudentName] = useState("");
-  const                                                    [major, setMajor] = useState("");
-  const                        [studentLookupStatus, setStudentLookupStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const                      [studentLookupMessage, setStudentLookupMessage] = useState("");
-  //-----------------------------------------------------------------------------------------------------
-  const                                    [selectedMajor, setSelectedMajor] = useState<string | null>(null);
-  const                                  [selectedCampus, setSelectedCampus] = useState<string | null>(null);
-  const                                    [selectedBatch, setSelectedBatch] = useState<string | null>(null);
-  const                              [selectedIEStatus, setSelectedIEStatus] = useState<boolean | null>(null);
-  //-----------------------------------------------------------------------------------------------------
-  const                                [isResetFileName, setIsResetFIleName] = useState(false);
-  const          [showUploadBulkConfirmation, setShowUploadBulkConfirmation] = useState(false);
-  const                                                    uploadBulkFormRef = useRef<HTMLFormElement>(null);
-  //-----------------------------------------------------------------------------------------------------
-  const       [singleUpdateState, singleUpdateAction, isSingleUpdatePending] = useActionState(newHandleSubmitSingleUpdate, null);
-  const [processingBulkState, processingBulkAction, isProcessingBulkPending] = useActionState(newHandleFormUploadBulkAction, null);
-  //-----------------------------------------------------------------------------------------------------
-  const [toast, setToast] = useState<ToastState | null>(null);
   const closeToast = useCallback(() => {
     setToast(null);
   }, []);
 
-  function handleChooseFile() {
-    fileInputRef.current?.click();
-    console.log(fileInputRef);
-    setIsResetFIleName(false);
+  function handleIeParticipationChooseFile() {
+    ieParticipationFileInputRef.current?.click();
+    console.log(ieParticipationFileInputRef);
+    setIsResetIeParticipationFileName(false);
   }
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleStudentRegistChooseFile() {
+    studentRegistFileInputRef.current?.click();
+    console.log(studentRegistFileInputRef);
+    setIsResetStudentRegistFileName(false);
+  }
+
+  function handleIeParticipationFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
       return;
     }
 
-    setSelectedFile(file);
+    setIeParticipationSelectedFile(file);
+  }
+
+  function handleStudentRegistFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setStudentRegistSelectedFile(file);
   }
 
   const filteredStudents = students.filter((student) => {
+    // Search by NIM or student name
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      normalizedQuery === "" ||
+      student.nim.toLowerCase().includes(normalizedQuery) ||
+      student.student_name.toLowerCase().includes(normalizedQuery);
+
     const matchesMajor =
       selectedMajor === null ||
       student.program_department === selectedMajor;
@@ -168,6 +208,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
       student.ie_status === selectedIEStatus;
 
     return (
+      matchesSearch &&
       matchesMajor &&
       matchesCampus &&
       matchesBatch &&
@@ -182,50 +223,79 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
   }, [singleUpdateState, router]);
 
   useEffect(() => {
-    if (processingBulkState?.success === true) {
+    if (processingIeParticipationBulkState?.success === true) {
       router.refresh();
     }
-  }, [processingBulkState, router]);
+  }, [processingIeParticipationBulkState, router]);
 
   useEffect(() => {
-  if (singleUpdateState?.success === true) {
-    setToast({
-      type: "success",
-      message:
-        singleUpdateState.message ??
-        "Student status updated successfully.",
-    });
-  } else if (singleUpdateState?.success === false) {
-    setToast({
-      type: "error",
-      message:
-        singleUpdateState.message ??
-        "Failed to update student status.",
-    });
-  }
+    if (processingStudentRegistBulkState?.success === true) {
+      router.refresh();
+    }
+  }, [processingStudentRegistBulkState, router])
+
+
+  useEffect(() => {
+    if (singleUpdateState?.success === true) {
+      setToast({
+        type: "success",
+        message:
+          singleUpdateState.message ??
+          "Student status updated successfully.",
+      });
+    } else if (singleUpdateState?.success === false) {
+      setToast({
+        type: "error",
+        message:
+          singleUpdateState.message ??
+          "Failed to update student status.",
+      });
+    }
   }, [singleUpdateState]);
 
   useEffect(() => {
-  if (processingBulkState?.success === true) {
-    setToast({
-      type: "success",
-      message:
-        processingBulkState.message ??
-        "Bulk upload completed successfully.",
-    });
-    setIsResetFIleName(true);
-    setSelectedFile(null);
-  } else if (processingBulkState?.success === false) {
-    setToast({
-      type: "error",
-      message:
-        processingBulkState.message ??
-        "Bulk upload failed.",
-    });
-    setIsResetFIleName(true);
-    setSelectedFile(null);
-  }
-  }, [processingBulkState]);
+    if (processingIeParticipationBulkState?.success === true) {
+      setToast({
+        type: "success",
+        message:
+          processingIeParticipationBulkState.message ??
+          "Bulk upload completed successfully.",
+      });
+      setIsResetIeParticipationFileName(true);
+      setIeParticipationSelectedFile(null);
+    } else if (processingIeParticipationBulkState?.success === false) {
+      setToast({
+        type: "error",
+        message:
+          processingIeParticipationBulkState.message ??
+          "Bulk upload failed.",
+      });
+      setIsResetIeParticipationFileName(true);
+      setIeParticipationSelectedFile(null);
+    }
+  }, [processingIeParticipationBulkState]);
+
+  useEffect(() => {
+    if (processingStudentRegistBulkState?.success === true) {
+      setToast({
+        type: "success",
+        message:
+          processingStudentRegistBulkState.message ??
+          "Bulk upload completed successfully.",
+      });
+      setIsResetIeParticipationFileName(true);
+      setIeParticipationSelectedFile(null);
+    } else if (processingStudentRegistBulkState?.success === false) {
+      setToast({
+        type: "error",
+        message:
+          processingStudentRegistBulkState.message ??
+          "Bulk upload failed.",
+      });
+      setIsResetIeParticipationFileName(true);
+      setIeParticipationSelectedFile(null);
+    }
+  }, [processingStudentRegistBulkState]); 
 
   useEffect(() => {
     // Clear the previous result whenever the NIM is incomplete.
@@ -233,7 +303,6 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
       setStudentName("");
       setMajor("");
       setStudentLookupMessage("");
-
       setStudentLookupStatus("idle");
       return;
     }
@@ -256,7 +325,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
 
         if (result.success && result.student) {
           setStudentName(result.student.studentName);
-          setMajor(result.student.major);
+          setMajor(result.student.major); 
 
           setStudentLookupStatus("success");
           setStudentLookupMessage("Student found.");
@@ -302,9 +371,9 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
           <p className="text-[14px] text-gray-500">Track and manage student IE completion status</p>
         </div>
         <div className="flex"> {/*Right Section*/}
-          <div className="flex items-center gap-3 px-4 border border-[#E2E8F0] rounded-2xl"> {/*Total Students*/}
+          <div className="flex h-[70px] items-center gap-3 px-4 border border-[#E2E8F0] rounded-2xl"> {/*Total Students*/}
             <div className="flex h-15 w-15 items-center justify-center"> {/*People Icon*/}
-              <Image src={peopleIcon} alt="PeopleIcon" width={60} height={60}/>
+              <Image src={studentCountIcon} alt="PeopleIcon" width={60} height={60}/>
             </div> 
             <div> {/*description*/}
               <div className="font-bold text-[24px]">{students.length}</div>
@@ -312,7 +381,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               <div className="text-[13px] text-gray-500">Students</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 px-4 border border-[#E2E8F0] rounded-2xl"> {/*Completed IE*/}
+          <div className="flex h-[70px] items-center gap-3 px-4 border border-[#E2E8F0] rounded-2xl"> {/*Completed IE*/}
             <div> {/*Clock Icon*/}
               <Image src={clockIcon} alt="ClockIcon" width={60} height={60}></Image>
             </div>
@@ -325,32 +394,31 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
         </div> 
       </div> {/* upper content */}
 
-      <div className="mt-4 flex gap-[108px]"> {/* Bagian Upload Bulk dan Single Update */}
-        {/* <form action={handleFormUploadBulkAction} className="flex items-center gap-9"> Bagian Upload Bulk */}
+      <div className="mt-4 flex gap-[157px]"> {/* Bagian Upload Bulk dan Single Update */}
         <form
-          ref={uploadBulkFormRef} 
-          action={processingBulkAction} 
+          ref={ieParticipationUploadBulkFormRef} 
+          action={processingIeParticipationBulkAction} 
           className="flex items-center gap-9"
         > {/*Bagian Upload Bulk*/}
           {/* hidden file input*/}
           <input
-            ref={fileInputRef}
-            name="inputFile"
+            ref={ieParticipationFileInputRef}
+            name="ieParticipationInputFile"
             type="file"
             accept=".csv, .xls, .xlsx"
             className="hidden"
-            onChange={handleFileChange}
+            onChange={handleIeParticipationFileChange}
           />
 
           {/* choose file button */}
           <button
             type="button"
-            onClick={handleChooseFile}
+            onClick={handleIeParticipationChooseFile}
             className="flex h-[58px] w-[148px] items-center justify-center gap-2 rounded-xl border-2 border-[#2563EB] px-4 font-semibold text-[#1E293B] hover:cursor-pointer"
           >
-            {selectedFile && !isResetFileName ? (
+            {ieParticipationSelectedFile && !isResetIeParticipationFileName ? (
               <span className="max-w-[100px] truncate">
-                {selectedFile.name}
+                {ieParticipationSelectedFile.name}
               </span>
             ): (
               <>
@@ -363,27 +431,27 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
           {/* upload Bulk button */}
           <button
             type="button"
-            disabled={!selectedFile || isProcessingBulkPending || isResetFileName}
-            onClick={() => setShowUploadBulkConfirmation(true)}
+            disabled={!ieParticipationSelectedFile || isProcessingIeParticipationBulkPending || isResetIeParticipationFileName}
+            onClick={() => setShowIeParticipationUploadBulkConfirmation(true)}
             className={`flex h-[58px] w-[180px] items-center justify-center gap-2 rounded-xl px-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer 
-                       ${isProcessingBulkPending ? "bg-[#636465]" : "bg-[#2563EB]"}`}
+                       ${isProcessingIeParticipationBulkPending ? "bg-[#636465]" : "bg-[#2563EB]"}`}
           >
             <div className="flex gap-[12px]">
               <div>
                 <Image src={uploadIcon} alt="uploadIcon"/>
               </div>
               <div>
-                <p>{isProcessingBulkPending ? "processing..." : "Upload bulk"}</p>
+                <p>{isProcessingIeParticipationBulkPending ? "processing..." : "Upload bulk"}</p>
               </div>
             </div>
           </button>
         </form> {/*Bagian Upload Bulk*/}
 
-        <div> {/* Single Update */}
+        <div className="flex gap-[32px]"> {/* Single Update */}
           <button
             type="button"
             onClick={() => {
-              bypassConfirmationRef.current = false;
+              singleUpdateBypassConfirmationRef.current = false;
               setShowSingleUpdateConfirmation(false);
               setShowSingleUpdate(true)
             }}
@@ -398,15 +466,34 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               </div>
             </div>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setshowStudentRegistModalDialog(true)
+            }}
+            className="w-[180px] h-[56px] border border-[#CAD5E2] rounded-xl shadow-2xl hover:cursor-pointer"
+          >
+            <div className="flex justify-center items-center gap-[8px]">
+              <div>
+                <Image src={registerStudenrIcon} alt="singleUpdateIcon"/>
+              </div>
+              <div> 
+                <p className="font-semibold text-[13.8px]">Register Student</p>
+              </div>
+            </div>
+          </button>
         </div> {/* Single Update */}
       </div> {/* Bagian Upload Bulk dan Single Update */}
       
-      <div className="flex mt-[32px] gap-[20px]"> {/* Searching Bar, Filter, dan reset filter*/}
+      <div className="flex mt-[32px] gap-[20px]"> {/* Searching Bar, Filter dropdown, dan reset filter*/}
         <div className="flex gap-[378px]"> {/* Searchnig bar dan filter*/}
           <div className="border w-[400px] h-[44px] rounded-xl relative border-[#E2E8F0]"> {/* Search Bar Text Input*/}
             <div className="px-[20px] py-[2px]">
               <input 
-                type="text" 
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)} 
                 placeholder="Search by NIM or name..."
                 className="outline-none w-[380px]"
               />
@@ -488,6 +575,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
         <button
           type="button"
           onClick={() => {
+            setSearchQuery("");
             setSelectedMajor(null);
             setSelectedCampus(null);
             setSelectedBatch(null);
@@ -513,39 +601,54 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
           </thead>
 
           <tbody>
-            {filteredStudents.map((student) => (
-              <tr key={student.nim}>
-                <td className="border border-[#ddd] p-[8px] text-left">
-                  <Link href={`./ie/${student.nim}`}>{student.nim}</Link>
-                </td>
-                <td className="border border-[#ddd] p-[8px] text-left">{student.student_name}</td>
-                <td className="border border-[#ddd] p-[8px] text-left">{student.program_department}</td>
-                <td className="border border-[#ddd] p-[8px] text-left">{student.campus}</td>
-                <td className="border border-[#ddd] p-[8px] text-left">
-                  <div className={`flex w-[57px] h-[23px] ${student.ie_status ? "bg-[#DCFCE7]" : "bg-[#F3F4F6]"} rounded-3xl justify-center items-center`}>
-                      <p className={`text-[12px] font-bold ${student.ie_status ? "text-[#166534]" : "text-[#B42318]"}`}>{student.ie_status ? "TRUE" : "FALSE"}</p>
-                  </div>
-                </td>
-                <td className="border border-[#ddd] p-[8px] text-left">
-                  <div className={`flex w-[57px] h-[23px] ${student.ie_status_wisuda ? "bg-[#DCFCE7]" : "bg-[#F3F4F6]"} rounded-3xl justify-center items-center`}>
-                      <p className={`text-[12px] font-bold ${student.ie_status_wisuda ? "text-[#166534]" : "text-[#B42318]"}`}>{student.ie_status_wisuda ? "TRUE" : "FALSE"}</p>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredStudents.length > 0 ? 
+              (
+                filteredStudents.map((student) => (
+                  <tr key={student.nim}>
+                    <td className="border border-[#ddd] p-[8px] text-left">
+                      <Link href={`./ie/${student.nim}`}>{student.nim}</Link>
+                    </td>
+                    <td className="border border-[#ddd] p-[8px] text-left">{student.student_name}</td>
+                    <td className="border border-[#ddd] p-[8px] text-left">{student.program_department}</td>
+                    <td className="border border-[#ddd] p-[8px] text-left">{student.campus}</td>
+                    <td className="border border-[#ddd] p-[8px] text-left">
+                      <div className={`flex w-[57px] h-[23px] ${student.ie_status ? "bg-[#DCFCE7]" : "bg-[#F3F4F6]"} rounded-3xl justify-center items-center`}>
+                          <p className={`text-[12px] font-bold ${student.ie_status ? "text-[#166534]" : "text-[#B42318]"}`}>{student.ie_status ? "TRUE" : "FALSE"}</p>
+                      </div>
+                    </td>
+                    <td className="border border-[#ddd] p-[8px] text-left">
+                      <div className={`flex w-[57px] h-[23px] ${student.ie_status_wisuda ? "bg-[#DCFCE7]" : "bg-[#F3F4F6]"} rounded-3xl justify-center items-center`}>
+                          <p className={`text-[12px] font-bold ${student.ie_status_wisuda ? "text-[#166534]" : "text-[#B42318]"}`}>{student.ie_status_wisuda ? "TRUE" : "FALSE"}</p>
+                      </div>
+                    </td>
+                  </tr>
+                ))  
+              )
+              :
+              (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="border border-[#ddd] p-6 text-center text-gray-500"
+                  >
+                    No students found.
+                  </td>
+                </tr>
+              )
+            }
           </tbody>
         </table>
       </div>
     </div> 
     
     {/* Bagian pop up confirmation modal dialog untuk upload bulk */}
-    {showUploadBulkConfirmation ? 
+    {showIeParticipationUploadBulkConfirmation ? 
       (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              setShowUploadBulkConfirmation(false);
+              setShowIeParticipationUploadBulkConfirmation(false);
             }
           }}
         >
@@ -557,16 +660,11 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
           >
             {/* Modal Header */}
             <div className="flex h-[76px] items-center justify-between border-b border-[#E2E8F0] px-[28px]">
-              <h2
-                id="upload-confirmation-title"
-                className="text-[20px] font-semibold text-[#0F172A]"
-              >
-                Confirm Bulk Upload
-              </h2>
+              <h2 id="upload-confirmation-title" className="text-[20px] font-semibold text-[#0F172A]">Confirm Bulk Upload</h2>
 
               <button
                 type="button"
-                onClick={() => setShowUploadBulkConfirmation(false)}
+                onClick={() => setShowIeParticipationUploadBulkConfirmation(false)}
                 aria-label="Close confirmation dialog"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
               >
@@ -590,7 +688,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                 <p
                   className="mt-[6px] break-words text-[14px] font-semibold text-[#0F172A]"
                 >
-                  {selectedFile?.name ?? "No file selected"}
+                  {ieParticipationSelectedFile?.name ?? "No file selected"}
                 </p>
               </div>
 
@@ -605,7 +703,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               {/* Cancel Button */}
               <button
                 type="button"
-                onClick={() => setShowUploadBulkConfirmation(false)}
+                onClick={() => setShowIeParticipationUploadBulkConfirmation(false)}
                 className="h-[38px] rounded-xl border border-[#CAD5E2] bg-white px-[18px] text-[13px] font-semibold text-[#334155] hover:bg-slate-100"
               >
                 Cancel
@@ -614,10 +712,10 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               {/* Confirm Upload Button */}
               <button
                 type="button"
-                disabled={!selectedFile}
+                disabled={!ieParticipationSelectedFile}
                 onClick={() => {
-                  setShowUploadBulkConfirmation(false);
-                  uploadBulkFormRef.current?.requestSubmit();
+                  setShowIeParticipationUploadBulkConfirmation(false);
+                  ieParticipationUploadBulkFormRef.current?.requestSubmit();
                 }}
                 className="h-[38px] rounded-xl bg-[#2563EB] px-[18px] text-[13px] font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -657,13 +755,12 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
 
               {/* Bagian Form pengisian */} 
               <div className="mt-[10px]">
-                {/* <form action={handleSubmitSingleUpdate}> */}
                 <form 
                   ref={singleUpdateFormRef}
                   action={singleUpdateAction}
                   onSubmit={(event) => {
-                    if (bypassConfirmationRef.current) {
-                      bypassConfirmationRef.current = false;
+                    if (singleUpdateBypassConfirmationRef.current) {
+                      singleUpdateBypassConfirmationRef.current = false;
                       return;
                     }
 
@@ -955,7 +1052,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                   if (!form.reportValidity()) return;
                   
                   // allow exactly one confirmed form 
-                  bypassConfirmationRef.current = true;
+                  singleUpdateBypassConfirmationRef.current = true;
                   singleUpdateFormRef.current?.requestSubmit();
                   form.requestSubmit();
                   setShowSingleUpdateConfirmation(false);
@@ -963,6 +1060,185 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                 className="h-[38px] rounded-xl bg-[#2563EB] px-[18px] text-[13px] font-semibold text-white hover:bg-blue-700"
               >
                 Confirm Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+      :
+      null
+    }
+
+    {showStudentRegistModalDialog ?
+      (
+      <div className="fixed inset-0 z-50 bg-black/50">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="w-[520px] overflow-hidden rounded-2xl bg-white shadow-xl">
+              {/* Bagian Ttile dan close button */}
+              <div className="w-[520px] h-[80px] border border-[#E2E8F0] flex items-center">
+                <div className="ml-[28px]"> {/* Title */}
+                  <p className="text-[22px] text-[#0F172A] font-semibold">Student Registration</p>
+                </div> {/* Title */}
+                
+                <div className="ml-[192px]"> {/* button close */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setshowStudentRegistModalDialog(false)
+                      setStudentRegistSelectedFile(null)
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  >
+                    x
+                  </button>
+                </div> {/* button close */}
+              </div>
+              {/* Bagian Ttile dan close button */}
+
+              <div className="mb-[32px]"> {/* Garis pembatas */}
+                  <hr className="w-[520px] border border-[#E2E8F0]"/>
+              </div>
+
+              <div className="px-[28px] mb-[32px]">
+                <form
+                  ref={studentRegistUploadBulkFormRef} 
+                  action={processingStudentRegistBulkAction} 
+                  className="flex items-center gap-9"
+                > {/*Bagian Upload Bulk*/}
+                  {/* hidden file input*/}
+                  <input
+                    ref={studentRegistFileInputRef}
+                    name="registerStudentInputFile"
+                    type="file"
+                    accept=".csv, .xls, .xlsx"
+                    className="hidden"
+                    onChange={handleStudentRegistFileChange}
+                  />
+
+                  {/* choose file button */}
+                  <button
+                    type="button"
+                    onClick={handleStudentRegistChooseFile}
+                    className="flex h-[58px] w-[148px] items-center justify-center gap-2 rounded-xl border-2 border-[#2563EB] px-4 font-semibold text-[#1E293B] hover:cursor-pointer"
+                  >
+                    {studentRegistSelectedFile && !isResetStudentRegistFileName ? (
+                      <span className="max-w-[100px] truncate">
+                        {studentRegistSelectedFile.name}
+                      </span>
+                    ): (
+                      <>
+                        <span>Choose File</span>
+                        <Image src={chooseFileIcon} alt="chooseFileIcon" width={28} height={28}/>
+                      </>
+                    )}
+                  </button>
+
+                  {/* upload Bulk button */}
+                  <button
+                    type="button"
+                    disabled={!studentRegistSelectedFile || isProcessingStudentRegistBulkPending || isResetStudentRegistFileName}
+                    onClick={() => setShowStudentRegistUploadBulkConfirmation(true)}
+                    className={`flex h-[58px] w-[180px] items-center justify-center gap-2 rounded-xl px-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer 
+                              ${isProcessingStudentRegistBulkPending ? "bg-[#636465]" : "bg-[#2563EB]"}`}
+                  >
+                    <div className="flex gap-[12px]">
+                      <div>
+                        <Image src={uploadIcon} alt="uploadIcon"/>
+                      </div>
+                      <div>
+                        <p>{isProcessingStudentRegistBulkPending ? "processing..." : "Upload bulk"}</p>
+                      </div>
+                    </div>
+                  </button>
+                </form> {/*Bagian Upload Bulk*/}
+              </div>
+          </div>
+        </div>
+      </div>
+      )
+      :
+      null
+    }
+
+    {/* Bagian pop up confirmation modal dialog untuk upload bulk */}
+    {showStudentRegistUploadBulkConfirmation ? 
+      (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowStudentRegistUploadBulkConfirmation(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-confirmation-title"
+            className="w-[480px] overflow-hidden rounded-2xl bg-white shadow-xl"
+          >
+            {/* Modal Header */}
+            <div className="flex h-[76px] items-center justify-between border-b border-[#E2E8F0] px-[28px]">
+              <h2 id="upload-confirmation-title" className="text-[20px] font-semibold text-[#0F172A]">Confirm Bulk Upload</h2>
+
+              <button
+                type="button"
+                onClick={() => setShowStudentRegistUploadBulkConfirmation(false)}
+                aria-label="Close confirmation dialog"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-[28px] py-[28px]">
+              <p className="text-[14px] leading-6 text-[#475569]">
+                Are you sure you want to upload this file? The system will
+                process its contents and update the IE Monitoring data.
+              </p>
+
+              {/* Selected File Information */}
+              <div className="mt-[20px] rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-[16px]">
+                <p className="text-[12px] font-semibold text-[#64748B]">
+                  SELECTED FILE
+                </p>
+
+                <p
+                  className="mt-[6px] break-words text-[14px] font-semibold text-[#0F172A]"
+                >
+                  {studentRegistSelectedFile?.name ?? "No file selected"}
+                </p>
+              </div>
+
+              <p className="mt-[16px] text-[12px] text-[#64748B]">
+                Please make sure you have selected the correct file before
+                proceeding.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex h-[76px] items-center justify-end gap-[12px] border-t border-[#E2E8F0] bg-[#F8FAFC] px-[28px]">
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={() => setShowStudentRegistUploadBulkConfirmation(false)}
+                className="h-[38px] rounded-xl border border-[#CAD5E2] bg-white px-[18px] text-[13px] font-semibold text-[#334155] hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+
+              {/* Confirm Upload Button */}
+              <button
+                type="button"
+                disabled={!studentRegistSelectedFile}
+                onClick={() => {
+                  setShowStudentRegistUploadBulkConfirmation(false);
+                  studentRegistUploadBulkFormRef.current?.requestSubmit();
+                }}
+                className="h-[38px] rounded-xl bg-[#2563EB] px-[18px] text-[13px] font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Confirm Upload
               </button>
             </div>
           </div>

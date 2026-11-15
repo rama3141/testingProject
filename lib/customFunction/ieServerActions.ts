@@ -5,7 +5,257 @@ import { supabaseServer } from "../supabase/server";
 import * as XLSX from 'xlsx';
 import papa from "papaparse";
 
-async function newSyncStudentIeStatuses(
+export async function handleRegisterStudentBulk(previousState: unknown, formData: FormData) {
+    try {
+        // ==================================================
+        // STEP 1: Read and parse the uploaded file
+        // ==================================================
+
+        const file = formData.get("registerStudentInputFile") as File;
+
+        if (!file || file.size === 0) {
+            throw new Error("Please upload a valid CSV or Excel file.");
+        }
+
+        const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+        let rawRecords: Record<string, unknown>[] = [];
+
+        if (fileExtension === "csv") {
+            const textContent = await file.text();
+
+            const parsed = papa.parse<Record<string, unknown>>(
+                textContent,
+                {
+                    header: true,
+                    dynamicTyping: false,
+                    skipEmptyLines: true,
+                }
+            );
+
+            if (parsed.errors.length > 0) {
+                throw new Error(
+                    `Failed to parse CSV: ${parsed.errors[0].message}`
+                );
+            }
+
+            rawRecords = parsed.data;
+        } else if (fileExtension === "xls" || fileExtension === "xlsx") {
+            const bytes = await file.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+
+            const workbook = XLSX.read(buffer, {
+                type: "buffer",
+            });
+
+            const sheetName = workbook.SheetNames[0];
+
+            if (!sheetName) {
+                throw new Error("The uploaded Excel file has no worksheets.");
+            }
+
+            const worksheet = workbook.Sheets[sheetName];
+
+            rawRecords = XLSX.utils.sheet_to_json<
+                Record<string, unknown>
+            >(worksheet, {
+                defval: "",
+            });
+        } else {
+            throw new Error(
+                "Unsupported file format. Please upload CSV, XLS, or XLSX."
+            );
+        }
+
+        if (rawRecords.length === 0) {
+            throw new Error("The uploaded file contains no data.");
+        }
+
+        // ==================================================
+        // STEP 2: Normalize and validate imported records
+        // ==================================================
+
+        type ImportedRecord = {
+            nim: string;
+            binusian_id: string;
+            binusian_batch: string;
+            student_name: string;
+            academic_career: string;
+            program_code: string;
+            program_department: string;
+            program_department_realization: string;
+            faculty_code: string;
+            faculty_school: string;
+            faculty_school_realization: string;
+            campus_code: string;
+            campus: string;
+            graduation_status: string;
+        };
+
+        const recordsToImport: ImportedRecord[] = rawRecords.map((row, index) => {
+            const                          nim = String(row["nim"]).trim();
+            const                   binusianId = String(row["binusian_id"]).trim();
+            const                binusianBatch = String(row["binusian_batch"]).trim();
+            const                  studentName = String(row["student_name"]).trim();
+            const               academicCareer = String(row["academic_career"]).trim();
+            const                  programCode = String(row["program_code"]).trim();
+            const            programDepartment = String(row["program_department"]).trim();
+            const programDepartmentRealization = String(row["program_department_realization"]).trim();
+            const                  facultyCode = String(row["faculty_code"]).trim();
+            const                facultySchool = String(row["faculty_school"]).trim();
+            const     facultySchoolRealization = String(row["faculty_school_realization"]).trim();
+            const                   campusCode = String(row["campus_code"]).trim();
+            const                       campus = String(row["campus"]).trim();
+            const             graduationStatus = String(row["graduation_status"]).trim();
+
+            if (!nim) {
+                throw new Error(`Row ${index + 2}: NIM is required.`);
+            }
+
+            return {
+                nim,
+                binusian_id: binusianId,
+                binusian_batch: binusianBatch,
+                student_name: studentName,
+                academic_career: academicCareer,
+                program_code: programCode,
+                program_department: programDepartment,
+                program_department_realization: programDepartmentRealization,
+                faculty_code: facultyCode,
+                faculty_school: facultySchool,
+                faculty_school_realization: facultySchoolRealization,
+                campus_code: campusCode,
+                campus: campus,
+                graduation_status: graduationStatus
+            };
+        });
+
+        console.log(
+            `Parsed ${recordsToImport.length} student records.`
+        );
+
+        // ==================================================
+        // STEP 3: Remove duplicate NIMs from uploaded records
+        // ==================================================
+
+        const uniqueStudentMap = new Map<string, ImportedRecord>();
+
+        for (const record of recordsToImport) {
+            if (!uniqueStudentMap.has(record.nim)) {
+                uniqueStudentMap.set(record.nim, record);
+            }
+        }
+
+        const uniqueRecords = [...uniqueStudentMap.values()];
+        const duplicateCount = recordsToImport.length - uniqueRecords.length;
+
+        // ==================================================
+        // STEP 4: Create the Supabase client
+        // ==================================================
+
+        const supabase = await supabaseServer();
+        const batchSize = 200;
+
+        // ==================================================
+        // STEP 5: Retrieve existing student NIMs
+        // ==================================================
+
+        const uniqueNims = uniqueRecords.map(
+            (record) => record.nim
+        );
+
+        const existingNims = new Set<string>();
+
+        for (let i = 0; i < uniqueNims.length; i += batchSize) {
+            const nimBatch = uniqueNims.slice(i, i + batchSize);
+
+            const { data, error } = await supabase
+                .from("students")
+                .select("nim")
+                .in("nim", nimBatch);
+
+            if (error) {
+                throw new Error(`Failed to retrieve existing students: ${error.message}`);
+            }
+
+            for (const student of data ?? []) {
+                existingNims.add(student.nim);
+            }
+        }
+
+        // ==================================================
+        // STEP 6: Separate new students from existing students
+        // ==================================================
+
+        const newStudents = uniqueRecords.filter(
+            (record) => !existingNims.has(record.nim)
+        );
+
+        const skippedExistingCount = existingNims.size;
+
+        console.log(`New students: ${newStudents.length}`);
+        console.log(`Existing students skipped: ${skippedExistingCount}`);
+
+        // ==================================================
+        // STEP 7: Insert new students into Supabase
+        // ==================================================
+
+        let insertedCount = 0;
+
+        for (let i = 0; i < newStudents.length; i += batchSize) {
+
+            const studentBatch = newStudents.slice(
+                i,
+                i + batchSize
+            );
+
+            const { data, error } = await supabase
+                .from("students")
+                .upsert(studentBatch, {
+                    onConflict: "nim",
+                    ignoreDuplicates: true,
+                })
+                .select("nim");
+
+            if (error) {
+                throw new Error(
+                    `Failed to register students: ${error.message}`
+                );
+            }
+
+            insertedCount += data?.length ?? 0;
+        }
+
+        // ==================================================
+        // STEP 8: Return registration results
+        // ==================================================
+
+        const skippedCount =
+            skippedExistingCount + duplicateCount;
+
+        console.log(`Student registration completed. ` + `Inserted: ${insertedCount}, ` + `Skipped: ${skippedCount}.`);
+
+        return {
+            success: true,
+            message:
+                `Student registration completed successfully. ` +
+                `Inserted ${insertedCount} new students. ` +
+                `Skipped ${skippedCount} existing or duplicate records.`,
+        };
+    } catch (error) {
+        console.error("Student Registration failed:", error);
+
+        return {
+            success: false,
+            message:
+            error instanceof Error
+                ? error.message
+                : "An unexpected error occurred during student registration.",
+        };
+    }
+}
+
+async function syncStudentIeStatuses(
     supabase: Awaited<ReturnType<typeof supabaseServer>>,
     inputNims: string[]
 ) {
@@ -152,13 +402,13 @@ async function newSyncStudentIeStatuses(
     }
 }
 
-export async function newHandleFormUploadBulkAction(previousState: unknown, formData: FormData) {
+export async function handleFormUploadBulkAction(previousState: unknown, formData: FormData) {
     try {
         // ==================================================
         // STEP 1: Read and parse the uploaded file
         // ==================================================
 
-        const file = formData.get("inputFile") as File;
+        const file = formData.get("ieParticipationInputFile") as File;
 
         if (!file || file.size === 0) {
             throw new Error("Please upload a valid CSV or Excel file.");
@@ -543,7 +793,7 @@ export async function newHandleFormUploadBulkAction(previousState: unknown, form
         // STEP 10: Synchronize student IE statuses
         // ==================================================
 
-        await newSyncStudentIeStatuses(supabase, uniqueNims);
+        await syncStudentIeStatuses(supabase, uniqueNims);
 
         console.log(
             `Bulk import completed. Processed ${insertedOrProcessedCount} ` +
@@ -625,7 +875,7 @@ export async function getStudentByNim(nim: string) {
     }
 }
 
-export async function newHandleSubmitSingleUpdate(previousState: unknown, formData: FormData) {
+export async function handleSubmitSingleUpdate(previousState: unknown, formData: FormData) {
     try{
         const nim = String(formData.get("nim") ?? "").trim();
         const campus = String(formData.get("campus") ?? "").trim();
@@ -768,8 +1018,20 @@ export async function newHandleSubmitSingleUpdate(previousState: unknown, formDa
             `Successfully inserted participation for student ${nim}.`
         );
 
-        await newSyncStudentIeStatuses(supabase, [nim]);
-        console.log(`Successfully inserted participation for student ${nim} and synchronized their statuses.`);
+        // await syncStudentIeStatuses(supabase, [nim]);
+        // console.log(`Successfully inserted participation for student ${nim} and synchronized their statuses.`);
+        
+        // Synchronize student IE statuses using PostgreSQL RPC.
+        const { data: syncResult, error: syncError } = await supabase.rpc(
+            "sync_student_ie_statuses",
+            {p_nim: nim,}
+        );
+
+        if (syncError) {
+            throw new Error(`Failed to synchronize student IE statuses: ${syncError.message}`);
+        }
+
+        console.log("Student IE statuses synchronized:", syncResult);
         return {
             success: true,
             message: `Successfully inserted participation for student ${nim} and synchronized their statuses.`
@@ -786,3 +1048,222 @@ export async function newHandleSubmitSingleUpdate(previousState: unknown, formDa
         };
     }
 }
+
+
+
+export async function handleDeleteStudentParticipation(
+    previousState: unknown,
+    formData: FormData
+) {
+    try {
+        // STEP 1: Read and validate the participation UUID.
+        const participationId = String(formData.get("participationId") ?? "").trim();
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        if (!uuidRegex.test(participationId)) {
+            throw new Error("Invalid participation ID.");
+        }
+
+        // STEP 2: Initialize Supabase.
+        const supabase = await supabaseServer();
+
+        // STEP 3: Verify authentication.
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            throw new Error("You must be authenticated to delete participation.");
+        }
+
+        // STEP 4: Execute PostgreSQL RPC.
+        const {
+            data: result,
+            error: rpcError,
+        } = await supabase.rpc(
+            "delete_student_participation",
+            {
+                p_participation_id: participationId,
+            }
+        );
+
+        if (rpcError) {
+            throw new Error(
+                `Failed to delete participation: ${rpcError.message}`
+            );
+        }
+
+        // STEP 5: Validate the RPC response.
+        const response = result as {
+            success?: boolean;
+            message?: string;
+            deleted_participation_id?: string;
+            deleted_event_id?: string | null;
+            event_deleted?: boolean;
+            student?: unknown;
+        } | null;
+
+        if (!response?.success) {
+            throw new Error(
+                response?.message ?? "Failed to delete participation."
+            );
+        }
+
+        // STEP 6: Return successful response.
+        return {
+            success: true,
+            message: response.message ?? "Participation deleted successfully.",
+            deletedParticipationId: response.deleted_participation_id,
+            deletedEventId: response.deleted_event_id,
+            eventDeleted: response.event_deleted,
+        };
+
+    } catch (error) {
+        console.error("Delete student participation failed:", error);
+
+        return {
+            success: false,
+            message:
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred while deleting participation.",
+        };
+    }
+}
+
+
+
+export async function handleEditStudentParticipation(
+    previousState: unknown,
+    formData: FormData
+) {
+    try {
+        // ==================================================
+        // STEP 1: Retrieve form data
+        // ==================================================
+        const participationId = String(formData.get("participationId") ?? "").trim();
+        const eventName = String(formData.get("eventName") ?? "").trim();
+        const rawEventYear = String(formData.get("eventYear") ?? "").trim();
+        const eventYear = Number(rawEventYear);
+        const eventLocation = String(formData.get("eventLocation") ?? "").trim();
+
+        // ==================================================
+        // STEP 2: Validate form data
+        // ==================================================
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        if (!uuidRegex.test(participationId)) {
+            throw new Error("Invalid participation ID.");
+        }
+
+        if (!eventName) {
+            throw new Error("Event name is required.");
+        }
+
+        if (!rawEventYear || !Number.isInteger(eventYear) || eventYear < 1900 || eventYear > 2200) {
+            throw new Error("Invalid event year.");
+        }
+
+        // ==================================================
+        // STEP 3: Initialize Supabase
+        // ==================================================
+        const supabase = await supabaseServer();
+
+        // ==================================================
+        // STEP 4: Verify authentication
+        // ==================================================
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            throw new Error(
+                "You must be authenticated to edit participation."
+            );
+        }
+
+        // ==================================================
+        // STEP 5: Execute PostgreSQL RPC
+        // ==================================================
+
+        const {
+            data: result,
+            error: rpcError,
+        } = await supabase.rpc(
+            "edit_student_participation",
+            {
+                p_participation_id: participationId,
+                p_event_name: eventName,
+                p_event_year: eventYear,
+                p_event_location: eventLocation || null,
+            }
+        );
+
+        if (rpcError) {
+            throw new Error(
+                `Failed to edit participation: ${rpcError.message}`
+            );
+        }
+
+        // ==================================================
+        // STEP 6: Validate RPC response
+        // ==================================================
+
+        const response = result as {
+            success?: boolean;
+            message?: string;
+            participation_id?: string;
+            nim?: string;
+            old_event_id?: string;
+            new_event_id?: string;
+            event_created?: boolean;
+            old_event_deleted?: boolean;
+            deleted_old_event_id?: string | null;
+            student?: unknown;
+        } | null;
+
+        if (!response?.success) {
+            throw new Error(
+                response?.message ??
+                "Failed to update student participation."
+            );
+        }
+
+        // ==================================================
+        // STEP 7: Return successful response
+        // ==================================================
+        return {
+            success: true,
+            message:
+                response.message ??
+                "Participation updated successfully.",
+
+            participationId: response.participation_id,
+            nim: response.nim,
+
+            oldEventId: response.old_event_id,
+            newEventId: response.new_event_id,
+
+            eventCreated: response.event_created,
+            oldEventDeleted: response.old_event_deleted,
+
+            deletedOldEventId: response.deleted_old_event_id,
+
+            student: response.student,
+        };
+
+    } catch (error) {
+        console.error("Edit student participation failed:", error);
+
+        return {
+            success: false,
+            message:
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred while editing participation.",
+        };
+    }
+} 
+

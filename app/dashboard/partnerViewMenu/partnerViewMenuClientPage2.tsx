@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import Image from "next/image";
+import edit_icon from "@/public/edit_icon.png"
+import delete_icon from "@/public/delete_icon.png"
+
 export type PartnerRecord = {
   id?: string | number;
   name: string;
@@ -33,7 +37,7 @@ function SearchIcon() {
     </svg>
   );
 }
-
+ 
 function EditIcon() {
   return (
     <svg
@@ -226,7 +230,7 @@ export default function PartnerViewMenuClientPage({partners = [], onEdit, onDele
                           className="inline-flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-[6px] bg-[#f0f4f8] text-[#43546b] hover:bg-[#e2eaf3]"
                           style={actionButtonStyle}
                         >
-                          <EditIcon />
+                          <Image src={edit_icon} alt="editIcon"/>
                         </button>
                         <button
                           type="button"
@@ -236,7 +240,7 @@ export default function PartnerViewMenuClientPage({partners = [], onEdit, onDele
                           className="inline-flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-[6px] bg-[#ffe6e6] text-[#fa2828] hover:bg-[#ffd4d4]"
                           style={actionButtonStyle}
                         >
-                          <DeleteIcon />
+                          <Image src={delete_icon} alt="deleteIcon"/>
                         </button>
                       </div>
                     </td>
