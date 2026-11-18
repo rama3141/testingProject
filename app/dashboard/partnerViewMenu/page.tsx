@@ -1,8 +1,8 @@
 {/* File ini untuk server component-nya, kegunaan-nya untuk loading data dari database */}
 
 import { supabaseServer } from "@/lib/supabase/server";
-import PartnerViewMenuClientPage from "./partnerViewMenuClientPage2";
-import type { PartnerRecord } from "./partnerViewMenuClientPage2";
+import PartnerViewMenuClientPage from "./partnerViewMenuClientPage";
+import type { PartnerRecord } from "./partnerViewMenuClientPage";
 
 export default async function partnerViewMenuPage() {
     const supabase = await supabaseServer();  

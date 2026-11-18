@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client"
 import { User } from "@supabase/supabase-js";
 
+import Image from "next/image";
+import loginLogo from "@/public/login_icon.jpeg"
+
 type EmailPasswordLibProps = {
     user: User | null;
 };
@@ -47,13 +50,11 @@ export default function LoginPage({ user }: EmailPasswordLibProps) {
             LOGO
             ------------------------------------------------- */}
 
-        <div className="mb-3 flex h-[105px] items-center">  
+        <div className="mb-3 flex h-[125px] items-center">  
 
           {/* Logo text */}
-          <div className="ml-[88px] flex flex-col leading-[1.05]">
-            <strong className="text-[30px] text-gray-900 text-center">
-              LOGIN
-            </strong>
+          <div className="ml-[75px] leading-[1.05] items-center">
+            <Image src={loginLogo} alt="loginLogo" width={120} height={120} />
           </div>
         </div>
 

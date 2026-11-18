@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link"; // Buat [id]
 
 export type PartnerRecord = {
   id?: string | number;
@@ -96,16 +97,12 @@ const fieldStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-export default function PartnerViewMenuClientPage({
-  partners = [],
-  onEdit,
-  onDelete,
-}: PartnerViewMenuClientPageProps) {
+export default function PartnerViewMenuClientPage({partners = [], onEdit, onDelete,}: PartnerViewMenuClientPageProps) {
   const [displayPartners, setDisplayPartners] = useState<PartnerRecord[]>(partners);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [editingPartner, setEditingPartner] = useState<PartnerRecord | null>(null);
+  const           [searchTerm, setSearchTerm] = useState("");
+  const   [editingPartner, setEditingPartner] = useState<PartnerRecord | null>(null);
   const [deletingPartner, setDeletingPartner] = useState<PartnerRecord | null>(null);
-  const [editForm, setEditForm] = useState<PartnerRecord | null>(null);
+  const               [editForm, setEditForm] = useState<PartnerRecord | null>(null); 
 
   useEffect(() => {
     setDisplayPartners(partners);
@@ -154,12 +151,12 @@ export default function PartnerViewMenuClientPage({
   }
 
   return (
-    <main className="mx-auto mt-3 mb-12 box-border w-[85.3vw] max-w-[1400px] text-[11px] text-[#182238] max-[640px]:mx-4 max-[640px]:w-[calc(100%-2rem)]">
+    <div className="w-[1400px] ml-[7.847vw] mt-[72px] mb-[348px]">
       <header className="mt-[72px] mb-6">
-        <h1 className="m-0 text-[25px] font-bold leading-tight tracking-[-0.75px] text-[#151d30]">
+        <h1 className="font-bold text-[32px] text-[#151d30]">
           Partner Data
         </h1>
-        <p className="mt-[5px] mb-0 text-[11px] leading-relaxed text-[#73829b]">
+        <p className="text-[14px] text-[#73829b]">
           View, manage, and edit your saved business contacts.
         </p>
       </header>
@@ -203,19 +200,60 @@ export default function PartnerViewMenuClientPage({
                   : index % 3 === 2
                     ? "bg-[#f0f4f8] text-[#596b83]"
                     : "bg-[#e8edf4] text-[#53647c]";
-
+                    
+                    // td className modifikasi sampai div
                 return (
                   <tr key={partner.id ?? `${partner.name}-${index}`} className="group">
                     <td className="h-[53px] border-b border-[#e8edf4] px-[18px] align-middle text-[#273751] group-last:border-b-0">
-                      <div className="flex min-w-0 items-center gap-[9px]">
-                        <span aria-hidden="true" className={`inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor}`}>
-                          {getInitials(partner.name)}
-                        </span>
-                        <span title={partner.name} className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-semibold text-[#1c2940]">
-                          {partner.name || "—"}
-                        </span>
-                      </div>
+
+                      {partner.id !== undefined && partner.id !== null ? (
+
+                        <Link
+                          href={`/dashboard/partnerViewMenu/${encodeURIComponent(String(partner.id))}`}
+                          title={`View ${partner.name}'s profile`}
+                          className="flex min-w-0 items-center gap-[9px] rounded-sm hover:text-[#2563eb] focus-visible:outline-2 focus-visible:outline-[#2563eb]"
+                        >
+
+                          {/* Partner Avatar */}
+                          <span
+                            aria-hidden="true"
+                            className={`inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor}`}
+                          >
+                            {getInitials(partner.name)}
+                          </span>
+
+                          {/* Clickable Partner Name */}
+                          <span
+                            title={partner.name}
+                            className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-semibold text-[#1c2940] hover:text-[#2563eb]"
+                          >
+                            {partner.name || "—"}
+                          </span>
+
+                        </Link>
+
+                      ) : (
+
+                        // Display normally if the record has no ID.
+                        <div className="flex min-w-0 items-center gap-[9px]">
+
+                          <span
+                            aria-hidden="true"
+                            className={`inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor}`}
+                          >
+                            {getInitials(partner.name)}
+                          </span>
+
+                          <span className="text-[11px] font-semibold text-[#1c2940]">
+                            {partner.name || "—"}
+                          </span>
+
+                        </div>
+
+                      )}
+
                     </td>
+
                     <td className="h-[53px] border-b border-[#e8edf4] px-[18px] align-middle text-[#273751] group-last:border-b-0">{partner.institution || "—"}</td>
                     <td className="h-[53px] border-b border-[#e8edf4] px-[18px] align-middle text-[#4d5d76] group-last:border-b-0">{partner.jobTitle || "—"}</td>
                     <td className="h-[53px] border-b border-[#e8edf4] px-[18px] align-middle text-[#4d5d76] group-last:border-b-0">{partner.email || "—"}</td>
@@ -327,6 +365,6 @@ export default function PartnerViewMenuClientPage({
           </section>
         </div>
       )}
-    </main>
+    </div>
   );
 }

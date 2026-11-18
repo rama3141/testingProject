@@ -44,7 +44,7 @@ export default function Navbar() {
     <header className="fixed z-[10] top-0 left-0 w-full border-b border-[#E2E8F0] py-[17px] px-[43px] bg-[#F8FAFC]"> {/* Sticky Navbar */}
       {/* <nav style={{ display: "flex", gap: 32, alignItems: "center" }}> */}
       <nav className="flex items-center gap-[1200px]">
-        <div className="flex gap-[32] items-center">
+        <div className="flex gap-[32px] items-center">
           <strong>
               <p className="text-[21px] text-[#0a0a0a] font-bold">Athena</p>
           </strong>

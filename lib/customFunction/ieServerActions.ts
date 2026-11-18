@@ -1,6 +1,6 @@
 "use server"
 
-import { supabaseServer } from "../supabase/server";
+import { supabaseServer } from "@/lib/supabase/server";
 
 import * as XLSX from 'xlsx';
 import papa from "papaparse";
@@ -402,6 +402,267 @@ async function syncStudentIeStatuses(
     }
 }
 
+async function newSyncStudentIeStatuses(
+    supabase: Awaited<ReturnType<typeof supabaseServer>>,
+    inputNims: string[]
+) {
+    // ==================================================
+    // STEP 1: Initialize synchronization settings
+    // ==================================================
+
+    const currentYear = Number(
+        new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Jakarta",
+            year: "numeric",
+        }).format(new Date())
+    );
+
+    const uniqueNims = [
+        ...new Set(
+            inputNims
+                .map((nim) => String(nim).trim())
+                .filter(Boolean)
+        ),
+    ];
+
+    if (uniqueNims.length === 0) {
+        return;
+    }
+
+    const studentBatchSize = 200;
+    const paginationSize = 500;
+    const eventBatchSize = 100;
+
+    // ==================================================
+    // STEP 2: Process students in batches
+    // ==================================================
+
+    for (
+        let i = 0;
+        i < uniqueNims.length;
+        i += studentBatchSize
+    ) {
+        const nimBatch = uniqueNims.slice(
+            i,
+            i + studentBatchSize
+        );
+
+        // --------------------------------------------------
+        // STEP 2A: Retrieve ALL participation records
+        // using pagination
+        // --------------------------------------------------
+
+        const participationRecords: {
+            nim: string;
+            event_id: string;
+        }[] = [];
+
+        let offset = 0;
+
+        while (true) {
+            const {
+                data,
+                error,
+            } = await supabase
+                .from("ie_participations")
+                .select("nim, event_id")
+                .in("nim", nimBatch)
+                .order("nim")
+                .order("event_id")
+                .range(
+                    offset,
+                    offset + paginationSize - 1
+                );
+
+            if (error) {
+                throw new Error(
+                    `Failed to fetch IE participations: ${error.message}`
+                );
+            }
+
+            const currentPage = data ?? [];
+
+            participationRecords.push(...currentPage);
+
+            // No more records to retrieve.
+            if (currentPage.length < paginationSize) {
+                break;
+            }
+
+            offset += paginationSize;
+        }
+
+        // --------------------------------------------------
+        // STEP 2B: Extract unique event UUIDs
+        // --------------------------------------------------
+
+        const eventIds = [
+            ...new Set(
+                participationRecords
+                    .map((record) => record.event_id)
+                    .filter(Boolean)
+            ),
+        ];
+
+        // --------------------------------------------------
+        // STEP 2C: Track students with participation
+        // --------------------------------------------------
+
+        const studentsWithParticipation = new Set(
+            participationRecords.map(
+                (record) => record.nim
+            )
+        );
+
+        // Track students who attended an event this year.
+        const currentYearNims = new Set<string>();
+
+        // --------------------------------------------------
+        // STEP 2D: Retrieve event details in batches
+        // --------------------------------------------------
+
+        const eventYearMap = new Map<string, number>();
+
+        for (
+            let j = 0;
+            j < eventIds.length;
+            j += eventBatchSize
+        ) {
+            const eventBatch = eventIds.slice(
+                j,
+                j + eventBatchSize
+            );
+
+            const {
+                data: eventRecords,
+                error: eventError,
+            } = await supabase
+                .from("event_detail")
+                .select("id, event_year")
+                .in("id", eventBatch);
+
+            if (eventError) {
+                throw new Error(
+                    `Failed to fetch event details: ${eventError.message}`
+                );
+            }
+
+            for (const event of eventRecords ?? []) {
+                eventYearMap.set(
+                    event.id,
+                    Number(event.event_year)
+                );
+            }
+        }
+
+        // Ensure all referenced events were retrieved.
+        if (eventYearMap.size !== eventIds.length) {
+            throw new Error(
+                "Some event details could not be retrieved."
+            );
+        }
+
+        // --------------------------------------------------
+        // STEP 2E: Identify students attending this year
+        // --------------------------------------------------
+
+        for (const participation of participationRecords) {
+            const eventYear = eventYearMap.get(
+                participation.event_id
+            );
+
+            if (eventYear === currentYear) {
+                currentYearNims.add(participation.nim);
+            }
+        }
+
+        // --------------------------------------------------
+        // STEP 2F: Categorize students
+        // --------------------------------------------------
+
+        const attendedThisYear = nimBatch.filter(
+            (nim) => currentYearNims.has(nim)
+        );
+
+        const attendedPreviousYearsOnly = nimBatch.filter(
+            (nim) =>
+                studentsWithParticipation.has(nim) &&
+                !currentYearNims.has(nim)
+        );
+
+        const noParticipation = nimBatch.filter(
+            (nim) => !studentsWithParticipation.has(nim)
+        );
+
+        // --------------------------------------------------
+        // STEP 2G: Update current-year participants
+        // --------------------------------------------------
+
+        if (attendedThisYear.length > 0) {
+            const { error } = await supabase
+                .from("students")
+                .update({
+                    ie_status: true,
+                    ie_status_wisuda: true,
+                })
+                .in("nim", attendedThisYear);
+
+            if (error) {
+                throw new Error(
+                    `Failed to update current-year student statuses: ${error.message}`
+                );
+            }
+        }
+
+        // --------------------------------------------------
+        // STEP 2H: Update historical participants
+        // --------------------------------------------------
+
+        if (attendedPreviousYearsOnly.length > 0) {
+            const { error } = await supabase
+                .from("students")
+                .update({
+                    ie_status: false,
+                    ie_status_wisuda: true,
+                })
+                .in("nim", attendedPreviousYearsOnly);
+
+            if (error) {
+                throw new Error(
+                    `Failed to update historical student statuses: ${error.message}`
+                );
+            }
+        }
+
+        // --------------------------------------------------
+        // STEP 2I: Reset students without participation
+        // --------------------------------------------------
+
+        if (noParticipation.length > 0) {
+            const { error } = await supabase
+                .from("students")
+                .update({
+                    ie_status: false,
+                    ie_status_wisuda: false,
+                })
+                .in("nim", noParticipation);
+
+            if (error) {
+                throw new Error(
+                    `Failed to reset student statuses: ${error.message}`
+                );
+            }
+        }
+
+        console.log(
+            `Synchronized ${nimBatch.length} students. ` +
+            `Current year: ${attendedThisYear.length}, ` +
+            `Historical only: ${attendedPreviousYearsOnly.length}, ` +
+            `No participation: ${noParticipation.length}.`
+        );
+    }
+}
+
 export async function handleFormUploadBulkAction(previousState: unknown, formData: FormData) {
     try {
         // ==================================================
@@ -482,52 +743,26 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
 
         const recordsToImport: ImportedRecord[] = rawRecords.map(
             (row, index) => {
-                const nim = String(row["nim"] ?? "").trim();
-
-                const eventName = String(
-                    row["event_name"] ?? ""
-                ).trim();
-
-                const rawYear = String(
-                    row["event_year"] ?? ""
-                ).trim();
-
+                const       nim = String(row["nim"] ?? "").trim();
+                const eventName = String(row["event_name"] ?? "").trim();
+                const   rawYear = String(row["event_year"] ?? "").trim();
                 const eventYear = Number(rawYear);
 
                 // Support both the old CSV column name and the
                 // new event_detail column name.
-                const eventLocation = String(
-                    row["event_location"] ??
-                    row["campus_location"] ??
-                    ""
-                ).trim();
-
-                const programDepartment = String(
-                    row["program_department"] ??
-                    row["major"] ??
-                    ""
-                ).trim();
+                const eventLocation = String(row["event_location"] ?? row["campus_location"] ?? "").trim();
+                const programDepartment = String(row["program_department"] ?? row["major"] ?? "").trim();
 
                 if (!nim) {
-                    throw new Error(
-                        `Row ${index + 2}: NIM is required.`
-                    );
+                    throw new Error(`Row ${index + 2}: NIM is required.`);
                 }
 
                 if (!eventName) {
-                    throw new Error(
-                        `Row ${index + 2}: Event name is required.`
-                    );
+                    throw new Error(`Row ${index + 2}: Event name is required.`);
                 }
 
-                if (
-                    !rawYear ||
-                    !Number.isInteger(eventYear) ||
-                    eventYear <= 0
-                ) {
-                    throw new Error(
-                        `Row ${index + 2}: Invalid event year.`
-                    );
+                if (!rawYear || !Number.isInteger(eventYear) || eventYear <= 0) {
+                    throw new Error(`Row ${index + 2}: Invalid event year.`);
                 }
 
                 return {
@@ -540,16 +775,13 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
             }
         );
 
-        console.log(
-            `Parsed ${recordsToImport.length} participation records.`
-        );
+        console.log(`Parsed ${recordsToImport.length} participation records.`);
 
         // ==================================================
         // STEP 3: Create the Supabase client
         // ==================================================
 
         const supabase = await supabaseServer();
-
         const batchSize = 200;
 
         // ==================================================
@@ -571,9 +803,7 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
                 .in("nim", nimBatch);
 
             if (error) {
-                throw new Error(
-                    `Failed to validate students: ${error.message}`
-                );
+                throw new Error(`Failed to validate students: ${error.message}`);
             }
 
             for (const student of data ?? []) {
@@ -673,9 +903,7 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
                 });
 
             if (error) {
-                throw new Error(
-                    `Failed to create events: ${error.message}`
-                );
+                throw new Error(`Failed to create events: ${error.message}`);
             }
         }
 
@@ -710,9 +938,7 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
                 .in("event_year", eventYears);
 
             if (error) {
-                throw new Error(
-                    `Failed to retrieve event IDs: ${error.message}`
-                );
+                throw new Error(`Failed to retrieve event IDs: ${error.message}`);
             }
 
             for (const event of data ?? []) {
@@ -733,10 +959,7 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
             );
 
             if (!eventIdMap.has(key)) {
-                throw new Error(
-                    `Could not find event "${event.event_name}" ` +
-                    `(${event.event_year}).`
-                );
+                throw new Error(`Could not find event "${event.event_name}" ` + `(${event.event_year}).`);
             }
         }
 
@@ -763,11 +986,7 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
 
         let insertedOrProcessedCount = 0;
 
-        for (
-            let i = 0;
-            i < participationsToInsert.length;
-            i += batchSize
-        ) {
+        for (let i = 0; i < participationsToInsert.length; i += batchSize) {
             const participationBatch = participationsToInsert.slice(
                 i,
                 i + batchSize
@@ -781,9 +1000,7 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
                 });
 
             if (error) {
-                throw new Error(
-                    `Failed to import participation records: ${error.message}`
-                );
+                throw new Error(`Failed to import participation records: ${error.message}`);
             }
 
             insertedOrProcessedCount += participationBatch.length;
@@ -793,7 +1010,8 @@ export async function handleFormUploadBulkAction(previousState: unknown, formDat
         // STEP 10: Synchronize student IE statuses
         // ==================================================
 
-        await syncStudentIeStatuses(supabase, uniqueNims);
+        // await syncStudentIeStatuses(supabase, uniqueNims);
+        await newSyncStudentIeStatuses(supabase, uniqueNims);
 
         console.log(
             `Bulk import completed. Processed ${insertedOrProcessedCount} ` +
@@ -908,9 +1126,7 @@ export async function handleSubmitSingleUpdate(previousState: unknown, formData:
             .maybeSingle();
 
         if (studentLookupError) {
-            throw new Error(
-                `Failed to retrieve student information: ${studentLookupError.message}`
-            );
+            throw new Error(`Failed to retrieve student information: ${studentLookupError.message}`);
         }
 
         if (!student) {
@@ -931,9 +1147,7 @@ export async function handleSubmitSingleUpdate(previousState: unknown, formData:
             .maybeSingle();
 
         if (eventLookupError) {
-            throw new Error(
-                `Failed to find event: ${eventLookupError.message}`
-            );
+            throw new Error(`Failed to find event: ${eventLookupError.message}`);
         }
 
         let eventId: string;
@@ -941,7 +1155,6 @@ export async function handleSubmitSingleUpdate(previousState: unknown, formData:
         if (existingEvent) {
             // Step 2A: Reuse the existing event's UUID.
             eventId = existingEvent.id;
-
             console.log(`Found existing event with ID: ${eventId}`);
         } else {
             // Step 2B: Create the event if it does not exist.
@@ -1051,10 +1264,7 @@ export async function handleSubmitSingleUpdate(previousState: unknown, formData:
 
 
 
-export async function handleDeleteStudentParticipation(
-    previousState: unknown,
-    formData: FormData
-) {
+export async function handleDeleteStudentParticipation(previousState: unknown, formData: FormData) {
     try {
         // STEP 1: Read and validate the participation UUID.
         const participationId = String(formData.get("participationId") ?? "").trim();
@@ -1089,9 +1299,7 @@ export async function handleDeleteStudentParticipation(
         );
 
         if (rpcError) {
-            throw new Error(
-                `Failed to delete participation: ${rpcError.message}`
-            );
+            throw new Error(`Failed to delete participation: ${rpcError.message}`);
         }
 
         // STEP 5: Validate the RPC response.
@@ -1105,9 +1313,7 @@ export async function handleDeleteStudentParticipation(
         } | null;
 
         if (!response?.success) {
-            throw new Error(
-                response?.message ?? "Failed to delete participation."
-            );
+            throw new Error(response?.message ?? "Failed to delete participation.");
         }
 
         // STEP 6: Return successful response.
@@ -1134,10 +1340,7 @@ export async function handleDeleteStudentParticipation(
 
 
 
-export async function handleEditStudentParticipation(
-    previousState: unknown,
-    formData: FormData
-) {
+export async function handleEditStudentParticipation(previousState: unknown, formData: FormData) {
     try {
         // ==================================================
         // STEP 1: Retrieve form data
@@ -1179,9 +1382,7 @@ export async function handleEditStudentParticipation(
         } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            throw new Error(
-                "You must be authenticated to edit participation."
-            );
+            throw new Error("You must be authenticated to edit participation.");
         }
 
         // ==================================================
@@ -1202,9 +1403,7 @@ export async function handleEditStudentParticipation(
         );
 
         if (rpcError) {
-            throw new Error(
-                `Failed to edit participation: ${rpcError.message}`
-            );
+            throw new Error(`Failed to edit participation: ${rpcError.message}`);
         }
 
         // ==================================================
@@ -1225,10 +1424,7 @@ export async function handleEditStudentParticipation(
         } | null;
 
         if (!response?.success) {
-            throw new Error(
-                response?.message ??
-                "Failed to update student participation."
-            );
+            throw new Error(response?.message ?? "Failed to update student participation.");
         }
 
         // ==================================================

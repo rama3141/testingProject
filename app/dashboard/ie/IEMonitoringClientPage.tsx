@@ -34,6 +34,8 @@ import {
   handleRegisterStudentBulk 
 } from "@/lib/customFunction/ieServerActions";
 
+import { handleResetAllTableData } from "@/lib/customFunction/developerServerActions";
+
 {/* Untuk Pop Up massage */}
 import ToastNotification from "./ToastNotification";
 
@@ -144,6 +146,9 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
   const                                                                           [selectedIEStatus, setSelectedIEStatus] = useState<boolean | null>(null);
   const                                                                                     [searchQuery, setSearchQuery] = useState("");
   //-----------------------------------------------------------------------------------------------------
+  const [showResetAllTableDataConfirmation, setShowResetAllTableDataConfirmation] = useState(false);
+  const [processingResetAllTableDataState, processingResetAllTableDataAction, isProcessingResetAllTableDataPending] = useActionState(handleResetAllTableData, null);
+  //-----------------------------------------------------------------------------------------------------
   const                                                                                                 [toast, setToast] = useState<ToastState | null>(null);
   //-----------------------------------------------------------------------------------------------------
   
@@ -216,6 +221,8 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
     );
   });
 
+
+
   useEffect(() => {
     if (singleUpdateState?.success === true) {
       router.refresh();
@@ -233,6 +240,13 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
       router.refresh();
     }
   }, [processingStudentRegistBulkState, router])
+
+  useEffect(() => { // ONLY FOR DEVELOPER / HANYA UNTUK DEVELOPER, NOT A REAL FEATURE AT DEPLOYED STAGE.
+    if (processingResetAllTableDataState?.success === true) {
+      router.refresh();
+    }
+  }, [processingResetAllTableDataState, router])
+
 
 
   useEffect(() => {
@@ -296,6 +310,25 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
       setIeParticipationSelectedFile(null);
     }
   }, [processingStudentRegistBulkState]); 
+
+  useEffect(() => { // ONLY FOR DEVELOPER / HANYA UNTUK DEVELOPER, NOT A REAL FEATURE AT DEPLOYED STAGE.
+    if (processingResetAllTableDataState?.success === true) {
+      setShowResetAllTableDataConfirmation(false);
+      setToast({
+        type: "success",
+        message:
+          processingResetAllTableDataState.message ??
+          "Success at reseting all table data.",
+      });
+    } else if (processingResetAllTableDataState?.success === false) {
+      setToast({
+        type: "error",
+        message:
+          processingResetAllTableDataState.message ??
+          "Reset table data failed.",
+      });
+    }
+  }, [processingResetAllTableDataState]); 
 
   useEffect(() => {
     // Clear the previous result whenever the NIM is incomplete.
@@ -480,6 +513,21 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               </div>
               <div> 
                 <p className="font-semibold text-[13.8px]">Register Student</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowResetAllTableDataConfirmation(true);
+            }}
+            className="inline-flex h-[56px] shrink-0 items-center justify-center rounded-[6px] bg-[#fa2828] hover:cursor-pointer hover:bg-[#771010]"
+          >
+            <div className="flex justify-center items-center gap-[8px]">
+              <div> 
+                <p className="font-semibold text-[13.8px] text-[#FFFFFF]">Reset Data</p>
+                <p className="font-bold text-[8px] text-[#FFD700]">(Only for developer)</p>
               </div>
             </div>
           </button>
@@ -1240,6 +1288,53 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               >
                 Confirm Upload
               </button>
+            </div>
+          </div>
+        </div>
+      )
+      :
+      null
+    }
+
+    {showResetAllTableDataConfirmation ? 
+      (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
+          <div className="w-[420px] rounded-xl bg-white p-6 shadow-xl">
+
+            {/* Modal Header */}
+            <h2 className="text-[18px] font-semibold text-[#0F172A]">Reset All Table Data?</h2>
+
+            {/* Modal Description */}
+            <p className="mt-3 text-[14px] leading-6 text-[#64748B]">
+              By confirm this reset button, all the table data will be deleted. Are you sure?
+            </p>
+
+            <p className="mt-3 text-[12px] text-[#DC2626]">This action cannot be undone.</p>
+
+            {/* Modal Actions */}
+            <div className="mt-6 flex justify-end gap-3">
+              {/* Cancel Button */}
+              <form action={processingResetAllTableDataAction}>
+                <button
+                  type="button"
+                  disabled={isProcessingResetAllTableDataPending}
+                  onClick={() => {
+                      setShowResetAllTableDataConfirmation(false);
+                  }}
+                  className="h-[38px] rounded-lg border border-[#CBD5E1] px-4 text-[13px] font-semibold text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                {/* Delete Button */}
+                <button
+                  type="submit"
+                  disabled={isProcessingResetAllTableDataPending}
+                  className="h-[38px] min-w-[120px] rounded-lg bg-[#DC2626] px-4 text-[13px] font-semibold text-white hover:bg-[#B91C1C] hover:cursor-pointer"
+                >
+                  {isProcessingResetAllTableDataPending ? "Reseting..." : "Confirm Reset"}
+                </button>
+              </form>
             </div>
           </div>
         </div>

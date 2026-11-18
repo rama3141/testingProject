@@ -2,7 +2,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import StudentProfileClient from "./StudentProfileClient";
 
 
-export default async function StudentProfilePage({params,}: {params: Promise<{nimId: string}>;}) {
+export default async function StudentProfilePage({params}: {params: Promise<{nimId: string}>;}) {
     const {nimId} = await params;
 
     const supabase = await supabaseServer();
