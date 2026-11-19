@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation"
+import SearchBar from "./SearchBar";
 
 {/* Untuk React hook */}
 import React, { useRef, useState, useActionState, useEffect, useCallback} from "react";
@@ -28,6 +29,7 @@ import {
 {/* untuk custom function */}
 import { 
   getStudentByNim,
+  getStudentsByNimPrefix,
   newHandleSubmitSingleUpdate, 
   newHandleFormUploadBulkAction 
 } from "@/lib/customFunction/ieServerActions";
@@ -53,6 +55,11 @@ type Student = {
   ie_status: boolean;
   ie_status_wisuda: boolean;
 }; 
+
+type NimSuggestion = Pick<
+  Student,
+  "nim" | "student_name" | "program_department"
+>;
 
 type IEMonitoringClientProps = {
   students: Student[];
@@ -121,6 +128,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
   const                                  [selectedCampus, setSelectedCampus] = useState<string | null>(null);
   const                                    [selectedBatch, setSelectedBatch] = useState<string | null>(null);
   const                              [selectedIEStatus, setSelectedIEStatus] = useState<boolean | null>(null);
+  const                              [searchTerm, setSearchTerm] = useState("");
   //-----------------------------------------------------------------------------------------------------
   const                                [isResetFileName, setIsResetFIleName] = useState(false);
   const          [showUploadBulkConfirmation, setShowUploadBulkConfirmation] = useState(false);
@@ -128,6 +136,18 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
   //-----------------------------------------------------------------------------------------------------
   const       [singleUpdateState, singleUpdateAction, isSingleUpdatePending] = useActionState(newHandleSubmitSingleUpdate, null);
   const [processingBulkState, processingBulkAction, isProcessingBulkPending] = useActionState(newHandleFormUploadBulkAction, null);
+  //-----------------------------------------------------------------------------------------------------
+  // Menyimpan daftar rekomendasi mahasiswa
+  const [nimSuggestions, setNimSuggestions] =
+    useState<NimSuggestion[]>([]);
+
+  // Mengetahui apakah pencarian rekomendasi sedang berlangsung
+  const [isNimSuggestionsLoading, setIsNimSuggestionsLoading] =
+    useState(false);
+
+  // Mengetahui apakah pencarian sudah selesai
+  const [hasSearchedNimPrefix, setHasSearchedNimPrefix] =
+    useState(false);
   //-----------------------------------------------------------------------------------------------------
   const [toast, setToast] = useState<ToastState | null>(null);
   const closeToast = useCallback(() => {
@@ -149,8 +169,16 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
 
     setSelectedFile(file);
   }
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
   const filteredStudents = students.filter((student) => {
+
+    // 1. Search berdasarkan NIM atau nama
+    const matchesSearch =
+      normalizedSearchTerm === "" ||
+      student.nim.toLowerCase().startsWith(normalizedSearchTerm) ||
+      student.student_name.toLowerCase().startsWith(normalizedSearchTerm);
+
     const matchesMajor =
       selectedMajor === null ||
       student.program_department === selectedMajor;
@@ -168,6 +196,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
       student.ie_status === selectedIEStatus;
 
     return (
+      matchesSearch &&
       matchesMajor &&
       matchesCampus &&
       matchesBatch &&
@@ -226,6 +255,69 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
     setSelectedFile(null);
   }
   }, [processingBulkState]);
+
+// UseEffect untuk melakukan pencarian rekomendasi mahasiswa berdasarkan NIM per angka yang diketikkan. Pencarian hanya dilakukan jika NIM terdiri dari 1 sampai 9 digit.
+  useEffect(() => {
+    const prefix = nim.trim();
+
+    // Rekomendasi hanya berjalan ketika NIM
+    // terdiri dari 1 sampai 9 digit.
+    if (!/^\d{1,9}$/.test(prefix)) {
+      setNimSuggestions([]);
+      setIsNimSuggestionsLoading(false);
+      setHasSearchedNimPrefix(false);
+      return;
+    }
+
+    let ignoreResult = false;
+
+    // Membersihkan rekomendasi sebelumnya.
+    setNimSuggestions([]);
+    setIsNimSuggestionsLoading(true);
+    setHasSearchedNimPrefix(false);
+
+    // Menunggu 300ms sebelum mengirim request.
+    const timeoutId = setTimeout(async () => {
+      try {
+        const result = await getStudentsByNimPrefix(prefix);
+
+        // Menghindari hasil pencarian lama
+        // menimpa hasil pencarian terbaru.
+        if (ignoreResult) return;
+
+        if (result.success) {
+          setNimSuggestions(result.students);
+        } else {
+          setNimSuggestions([]);
+
+          console.error(result.message);
+        }
+
+        setHasSearchedNimPrefix(true);
+
+      } catch (error) {
+        if (ignoreResult) return;
+
+        console.error("NIM suggestion error:", error);
+
+        setNimSuggestions([]);
+        setHasSearchedNimPrefix(true);
+
+      } finally {
+        if (!ignoreResult) {
+          setIsNimSuggestionsLoading(false);
+        }
+      }
+    }, 10);
+
+    // Membersihkan timer jika NIM berubah.
+    return () => {
+      ignoreResult = true;
+      clearTimeout(timeoutId);
+    };
+
+  }, [nim]);
+
 
   useEffect(() => {
     // Clear the previous result whenever the NIM is incomplete.
@@ -387,7 +479,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
               setShowSingleUpdateConfirmation(false);
               setShowSingleUpdate(true)
             }}
-            className="w-[180px] h-[56px] border border-[#CAD5E2] rounded-xl shadow-2xl hover:cursor-pointer"
+            className="w-[180px] h-[56px] border border-[#CAD5E2] rounded-xl shadow-[0_2px_4px_0_rgba(0,0,0,0.25)] hover:shadow-[0_4px_4px_0_rgba(0,0,0,0.25)]  hover:cursor-pointer"
           >
             <div className="flex justify-center items-center gap-[8px]">
               <div>
@@ -403,20 +495,10 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
       
       <div className="flex mt-[32px] gap-[20px]"> {/* Searching Bar, Filter, dan reset filter*/}
         <div className="flex gap-[378px]"> {/* Searchnig bar dan filter*/}
-          <div className="border w-[400px] h-[44px] rounded-xl relative border-[#E2E8F0]"> {/* Search Bar Text Input*/}
-            <div className="px-[20px] py-[2px]">
-              <input 
-                type="text" 
-                placeholder="Search by NIM or name..."
-                className="outline-none w-[380px]"
-              />
-            </div>
-            {/* <input type="text" placeholder="Search by NIM or name..."/> */}
-            <div className="absolute top-[10px] px-[5px]"> {/* Search bar icon */}
-              <Image src={searchIcon} alt="searchIcon"/>
-            </div>
-          </div>
-          
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+          />
           <div> {/*Filters Dropdown*/}
             <NavigationMenu>
               <NavigationMenuList className="gap-[8px]">
@@ -428,7 +510,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                       <NavigationMenuLink 
                         key={option}
                         onClick={() => setSelectedMajor(option)}
-                        className="cursor-pointer font-bold hover:bg-blue-500 hover:text-white hover:font-bold"
+                        className="cursor-pointer font-bold hover:bg-[#D6E6FF] hover:text-[#1E40AF] hover:font-bold"
                       >
                         {option}
                       </NavigationMenuLink>
@@ -443,7 +525,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                       <NavigationMenuLink 
                         key={option}
                         onClick={() => setSelectedCampus(option)}
-                        className="cursor-pointer font-bold hover:bg-blue-500 hover:text-white hover:font-bold"
+                        className="cursor-pointer font-bold hover:bg-[#D6E6FF] hover:text-[#1E40AF] hover:font-bold"
                       >
                         {option}
                       </NavigationMenuLink>
@@ -458,7 +540,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                       <NavigationMenuLink 
                         key={option}
                         onClick={() => setSelectedBatch(option)}
-                        className="cursor-pointer font-bold hover:bg-blue-500 hover:text-white hover:font-bold"
+                        className="cursor-pointer font-bold hover:bg-[#D6E6FF] hover:text-[#1E40AF] hover:font-bold"
                       >
                         {option}
                       </NavigationMenuLink>
@@ -473,7 +555,7 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                       <NavigationMenuLink
                         key={option}
                         onClick={() => setSelectedIEStatus(option === "true")}
-                        className="cursor-pointer font-bold hover:bg-blue-500 hover:text-white hover:font-bold"
+                        className="cursor-pointer font-bold hover:bg-[#D6E6FF] hover:text-[#1E40AF] hover:font-bold"
                       >
                         {option.toUpperCase()}
                       </NavigationMenuLink>
@@ -685,35 +767,99 @@ export default function IEPage({students,}: IEMonitoringClientProps) {
                         >
                           {singleUpdateFormFields[0].label}
                         </label>
-                        <div className="flex w-[464px] h-[42px] mt-[8px] border border-[#E2E8F0] rounded-xl">
-                          <input
-                            id={singleUpdateFormFields[0].id} 
-                            type={singleUpdateFormFields[0].type}
-                            name={singleUpdateFormFields[0].id}
-                            placeholder={singleUpdateFormFields[0].placeholder}
-                            value={nim}
-                            onChange={(event) => {
-                              const digitsOnly = event.target.value
-                                .replace(/\D/g, "")
-                                .slice(0, 10);
+                         {/* NIM Input */}
+                        <div className="relative mt-[8px] w-[464px]">
+                          <div className="flex w-[464px] h-[42px] mt-[8px] border border-[#E2E8F0] rounded-xl">
+                            <input
+                              id={singleUpdateFormFields[0].id} 
+                              type={singleUpdateFormFields[0].type}
+                              name={singleUpdateFormFields[0].id}
+                              placeholder={singleUpdateFormFields[0].placeholder}
+                              value={nim}
+                              onChange={(event) => {
+                                const digitsOnly = event.target.value
+                                  .replace(/\D/g, "")
+                                  .slice(0, 10);
 
-                              setNim(digitsOnly);
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]{10}"
-                            maxLength={10}
-                            minLength={10}
-                            autoComplete="off"
-                            required
-                            className="outline-none w-[450px]"
-                          />
-                          <button
-                            type="button"
-                            aria-label="Student lookup runs automatically when the NIM reaches 10 digits"
-                            className="hover:bg-[#edb10a] hover:cursor-pointer"
-                          >
-                            <Image src={searchIcon} alt="searchIcon"/>
-                          </button>
+                                setNim(digitsOnly);
+                              }}
+                              inputMode="numeric"
+                              pattern="[0-9]{10}"
+                              maxLength={10}
+                              minLength={10}
+                              autoComplete="off"
+                              required
+                              className="outline-none w-[450px]"
+                            />
+                            <button
+                              type="button"
+                              aria-label="Student lookup runs automatically when the NIM reaches 10 digits"
+                              className="hover:bg-[#edb10a] hover:cursor-pointer"
+                            >
+                              <Image src={searchIcon} alt="searchIcon"/>
+                            </button>
+                          </div>
+                          {/* NIM Recommendation Dropdown */}
+                          {nim.length > 0 &&
+                            nim.length < 10 &&
+                            (isNimSuggestionsLoading || hasSearchedNimPrefix) && (
+
+                              <div className="absolute left-0 top-[46px] z-50 w-full rounded-xl border border-[#E2E8F0] bg-white shadow-lg overflow-hidden">
+
+                                {/* Loading */}
+                                {isNimSuggestionsLoading && (
+                                  <div className="p-3 text-sm text-slate-500">
+                                    Searching students...
+                                  </div>
+                                )}
+
+                                {/* Recommendation List */}
+                                {!isNimSuggestionsLoading && nimSuggestions.length > 0 && (
+                                  <div className="max-h-[200px] overflow-y-auto">
+
+                                    {nimSuggestions.map((student) => (
+                                      <button
+                                        key={student.nim}
+                                        type="button"
+                                        onClick={() => {
+                                          setNim(student.nim);
+                                          setStudentName(student.student_name);
+                                          setMajor(student.program_department ?? "");
+
+                                          setNimSuggestions([]);
+                                        }}
+                                        className="w-full flex flex-col items-start px-3 py-2 hover:bg-[#D6E6FF] transition-colors border-b border-slate-100 last:border-none"
+                                      >
+
+                                        <span className="text-sm font-semibold text-[#0F172A]">
+                                          {student.nim}
+                                        </span>
+
+                                        <span className="text-xs text-slate-500">
+                                          {student.student_name}
+                                        </span>
+
+                                      </button>
+                                    ))}
+
+                                  </div>
+                                )}
+
+                                {/* No Results */}
+                                {!isNimSuggestionsLoading &&
+                                  hasSearchedNimPrefix &&
+                                  nimSuggestions.length === 0 && (
+
+                                    <div className="p-3 text-sm text-slate-500">
+                                      No matching students found.
+                                    </div>
+
+                                  )}
+
+                              </div>
+
+                            )}
+                          {/* NIM Input (Last) */}
                         </div>
                       </div> {/* Bagian field NIM */}
 

@@ -625,6 +625,71 @@ export async function getStudentByNim(nim: string) {
     }
 }
 
+
+export async function getStudentsByNimPrefix(prefix: string) {
+    const normalizedPrefix = String(prefix ?? "").trim();
+
+    // Memastikan input hanya berisi 1-9 digit.
+    // NIM lengkap (10 digit) tetap menggunakan getStudentByNim.
+    if (!/^\d{1,9}$/.test(normalizedPrefix)) {
+        return {
+            success: false,
+            message: "Invalid NIM prefix.",
+            students: [],
+        };
+    }
+
+    try {
+        const supabase = await supabaseServer();
+
+        // Memastikan pengguna sudah login.
+        const { data: { user }, error: authError } =
+            await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return {
+                success: false,
+                message: "You must be logged in.",
+                students: [],
+            };
+        }
+
+        // Mengambil mahasiswa berdasarkan awalan NIM.
+        const { data: students, error } = await supabase
+            .from("students")
+            .select("nim, student_name, program_department")
+            .like("nim", `${normalizedPrefix}%`)
+            .order("nim", { ascending: true })
+            .limit(8);
+
+        if (error) {
+            console.error("NIM suggestions error:", error);
+
+            return {
+                success: false,
+                message: "Failed to retrieve student suggestions.",
+                students: [],
+            };
+        }
+
+        return {
+            success: true,
+            message: "Student suggestions retrieved.",
+            students: students ?? [],
+        };
+
+    } catch (error) {
+        console.error("Unexpected suggestion error:", error);
+
+        return {
+            success: false,
+            message: "Unexpected error occurred.",
+            students: [],
+        };
+    }
+}
+
+
 export async function newHandleSubmitSingleUpdate(previousState: unknown, formData: FormData) {
     try{
         const nim = String(formData.get("nim") ?? "").trim();
